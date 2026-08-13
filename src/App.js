@@ -124,75 +124,7 @@ const COMBINATIONS = [
   },
 ];
 
-function createEnemy(x, y, type = Math.floor(Math.random() * 4)) {
-  const types = [
-    {
-      name: "Bruxo Sombrio",
-      color: "#15121c",
-      hp: 45,
-      speed: 35,
-      size: 20,
 
-      // Alma mais fraca
-      soul: "minor",
-      soulXP: 8,
-    },
-
-    {
-      name: "Bruxa Negra",
-      color: "#26152e",
-      hp: 70,
-      speed: 28,
-      size: 23,
-
-      soul: "dark",
-      soulXP: 15,
-    },
-
-    {
-      name: "Mago Corrompido",
-      color: "#101a25",
-      hp: 110,
-      speed: 22,
-      size: 27,
-
-      soul: "cursed",
-      soulXP: 25,
-    },
-
-    {
-      name: "Bruxo Espectral",
-      color: "#322044",
-      hp: 170,
-      speed: 18,
-      size: 30,
-
-      soul: "spectral",
-      soulXP: 40,
-    },
-  ];
-
-  const t = types[type];
-
-  return {
-    id: Math.random(),
-
-    x,
-    y,
-
-    ...t,
-
-    maxHp: t.hp,
-
-    frozen: 0,
-
-    // Novo efeito
-    wet: 0,
-
-    // Controle de ricochete
-    hitByProjectile: false,
-  };
-}
 
 function createEnemy(x, y, type = Math.floor(Math.random() * 4)) {
   const types = [
