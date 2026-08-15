@@ -1,0 +1,55 @@
+# Walkthrough - Resumo de Modificações e Validação do Projeto Roguelike
+
+## Arquivos Alterados e Criados
+
+1. **[App.js](file:///c:/Users/Aluno/Desktop/primeiro-projeto/src/App.js)**:
+   - Eliminação de mais de 13 funções duplicadas que causavam concorrência e erros de compilação/execução.
+   - Adição de inicializadores ausentes em `gameRef.current` (`xpMultiplierTimer`, `damageMultiplierTimer`).
+   - Implementação de pausa total durante o Level Up (paralisa inimigos, projéteis, timers, waves e movimento).
+   - Atualização de `getClosestEnemy(x, y, ignoreIds)` para suporte correto a ricochete sem falhas de sintaxe/parâmetros.
+   - Consolidação de um único loop `requestAnimationFrame` no `useEffect` com limpeza adequada (`cancelAnimationFrame`).
+   - Conexão do desenho com a camada de abstração de sprites (`drawSpriteOrFallback`).
+
+2. **[sprites.js](file:///c:/Users/Aluno/Desktop/primeiro-projeto/src/assets/sprites.js)** *(NOVO)*:
+   - Gerenciador centralizado de sprites com suporte a carregamento futuro de imagens para personagens, inimigos, magias, familiares, baús e cenários.
+   - Sistema de fallback gracioso que renderiza proceduralmente via Canvas caso os sprites não existam.
+
+3. **Estrutura de Diretórios em Assets** *(NOVOS)*:
+   - `src/assets/characters/`
+   - `src/assets/enemies/`
+   - `src/assets/spells/`
+   - `src/assets/familiars/`
+   - `src/assets/items/`
+   - `src/assets/effects/`
+   - `src/assets/background/`
+
+---
+
+## Principais Erros Corrigidos
+
+- **Duplicações Massivas**: Removidos blocos duplicados de `updateProjectiles`, `updateShadow`, `updateEnemies`, `spawnEnemies`, `spawnChest`, `checkChests`, `updateRepulsionRune`, `updateHealingRune`, `updateStorm`, `lightningChain`, `updateWaves`, `update` e `worldToScreen`.
+- **TypeError ao abrir Baús**: Resolvido o acesso a `game.timers.doubleXP` e `game.timers.doubleDamage` inexistentes no estado por meio de contadores `xpMultiplierTimer` e `damageMultiplierTimer` atualizados via delta time (`dt`).
+- **Respeito à Pausa**: Corrigido o uso de `window.setTimeout` para que temporizadores de buffs também paralisem durante a tela de Level Up / Grimório.
+- **Assinaturas de Função**: Ajustado `getClosestEnemy` para aceitar a lista de IDs a ignorar no cálculo de ricochete.
+
+---
+
+## Funcionalidades Preservadas
+
+1. **Tiro Básico**: Ativo automaticamente desde o início.
+2. **Magias (Chama, Gelo, Raio, Vórtice Sombrio, Orbes de Fogo, Familiar)**: Todas funcionais e melhoráveis até o nível máximo.
+3. **Almas e XP**: Almas geradas na morte de inimigos, atraídas magneticamente até o bruxo e concedendo XP.
+4. **Level Up & Grimório**: Pausa o gameplay completo e abre a interface de seleção de magias e fusões.
+5. **Baús & Bomba Atômica**: Surgimento de baús com buffs temporários, cura, level up e a Bomba Atômica varrendo os inimigos da tela.
+6. **Waves e Bosses**: Bosses spawnando a cada 5 waves, concedendo nível extra e a escolha de artefatos.
+7. **Artefatos (Espelho, Vassoura, Chama Perfurante, Ricochete, Repulsão, Cura, Tempestade)**: Totalmente ativos.
+8. **Efeitos Climáticos**: Chuva do Símbolo da Tempestade molhando inimigos e amplificando a corrente de raios.
+9. **Movimento, Câmera e Mapa**: Movimentação fluida via WASD/Setas e câmera suave em mapa contínuo.
+10. **Game Over**: Modal de fim de noite ao ter a vida reduzida a zero com botão de reinício limpo.
+
+---
+
+## Resultado da Validação
+
+- **Compilação**: Projeto compila com sucesso (`react-scripts build` concluído sem erros).
+- **Sem Erros Restantes**: Nenhuma referência quebrada ou variável não declarada.

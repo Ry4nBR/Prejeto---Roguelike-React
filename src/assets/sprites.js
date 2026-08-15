@@ -29,6 +29,16 @@ export const SPRITES = {
   chest: null,
   soul: null,
   forestTile: null,
+  lavaPool: null,
+  meteor: null,
+  vines: null,
+  humidityCloud: null,
+  nukeFlash: null,
+  repulsionRune: null,
+  healingRune: null,
+  fusionInferno: null,
+  fusionTempestade: null,
+  fusionAbismo: null,
 };
 
 /**

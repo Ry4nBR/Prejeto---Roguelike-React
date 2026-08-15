@@ -1,0 +1,116 @@
+# Plano de Implementação - Nova Atualização de Sistemas e Conteúdo do Roguelike
+
+Este plano detalha a implementação das novas magias, sistemas de reação elemental, formação geométrica pentagonal, fusões funcionais, rebalanceamento de bosses e refinamento visual de bomba e runas, mantendo 100% das mecânicas existentes intactas.
+
+## User Review Required
+
+> [!IMPORTANT]
+> **Preservação Total**: Nenhuma mecânica atual será desativada ou removida. Tiro básico, Chama, Gelo, Raio, Vórtice, Orbes, Familiares, Almas, Baús, Artefatos, Bosses, Tempestade e Câmera continuarão operando com total integridade.
+
+> [!NOTE]
+> Todas as novas entidades (Lava, Meteoro, Vinhas, Névoa Arcana, Runas Nórdicas e Fusões) serão conectadas ao registrador `src/assets/sprites.js` via `drawSpriteOrFallback`, permitindo renderização via Canvas procedural enquanto sprites não forem fornecidos.
+
+---
+
+## Detalhamento dos Módulos e Sistemas
+
+### 1. Balanceamento dos Bosses
+- **Aparência Visual**: Reduzir a escala visual do Bruxo Primordial (tamanho de `55` / escala `1.8` para tamanho ~`38` / escala `1.3`).
+- **Pontos de Vida**: Reduzir HP base de `1800 + wave * 250` para `750 + wave * 150`, tornando a luta desafiadora mas ágil.
+- **Mantido**: Respawn a cada 5 waves, concessão imediata de +1 Nível e seleção de Artefato.
+
+### 2. Efeito Visual Aprimorado da Bomba Atômica
+- **Estágios Visuais (via Delta Time)**:
+  1. *Carga/Preparação*: Brilho concentrado no jogador (0.3s).
+  2. *Explosão & Onda*: Onda de energia dourada expansiva rápida (raio até 1200px).
+  3. *Flash Global*: Clarão estelar cobrindo praticamente toda a viewport com fade-out gradual.
+  4. *Partículas*: Fragmentos de energia arcana voando do centro.
+  5. *Limpeza*: Eliminação completa dos inimigos sem travar o loop principal do jogo.
+
+### 3. Runas Nórdicas Sub-Jogador
+- **Posicionamento**: Desenhadas diretamente na camada inferior (abaixo do personagem, tamanho ~3x o bruxo, raio 65px).
+- **Estética Nórdica**:
+  - *Runa da Repulsão*: Símbolo da Runa *Algiz* / *Thurisaz* com pulso roxo/dourado.
+  - *Runa da Vida*: Símbolo da Runa *Berkanan* / *Laguz* com brilho verde/esmeralda.
+- **Renderização**: Jogador desenhado por cima da runa. Efeito ativo e animado durante toda a duração.
+
+### 4. Nível Máximo das Magias (Lv. 5 Estrito)
+- **Trava de Nível**: `SPELLS` atualizados para max = 5.
+- **Filtro no Grimório**: `triggerLevelUp()` excluirá qualquer magia com `game.spells[key] >= 5`.
+- **Seleção Dinâmica**: Se restarem menos de 3 magias disponíveis, serão exibidas apenas as elegíveis (ou Fusões liberadas).
+
+### 5. Quatro Novas Magias Independentes
+
+#### A. Poças de Lava (`lava`)
+- **Funcionamento**: Surgem aleatoriamente no chão perto de inimigos/jogador e causam dano por segundo.
+- **Progressão**: Lv.1 (1 poça) a Lv.5 (5 poças).
+- **Visual**: Fogo líquido borbulhante com brilho avermelhado no chão.
+
+#### B. Meteoro (`meteor`)
+- **Funcionamento**: Sinalização de alvo no chão -> queda de meteoro incandescente -> explosão com dano em área.
+- **Progressão**: Lv.1 (1 meteoro) a Lv.5 (5 meteoros com área/dano expandidos).
+- **Visual**: Círculo de aviso -> rastro de fogo caindo -> onda de choque flamejante.
+
+#### C. Vinhas Sombrias (`vines`)
+- **Funcionamento**: Brotam sob inimigos e os prendem no local (`rootedTimer`).
+- **Progressão Exata**: Lv.1 (3 inimigos) -> Lv.2 (6) -> Lv.3 (9) -> Lv.4 (12) -> Lv.5 (15).
+- **Visual**: Ramos espinhosos sombrios enrolados ao redor das pernas dos inimigos.
+
+#### D. Umidade Arcana (`humidity`)
+- **Funcionamento**: Névoa d'água ao redor do bruxo aplicando o status `wet` e ícone de gota `💧` sobre os inimigos.
+- **Reações Elementais**:
+  - *Umidade + Chama*: Dano de vapor adicional (dano +100%) + nuvem de névoa quente.
+  - *Umidade + Raio*: O raio se espalha atingindo até 3 inimigos molhados próximos.
+  - *Umidade + Gelo*: Multiplica a duração do congelamento por **3x**.
+  - *Umidade + Vinhas*: Multiplica a duração do enraizamento das vinhas por **3x**.
+
+---
+
+### 6. Geometria Pentagonal para Familiares e Orbes
+- **Orbes de Fogo**: Distribuídos igualmente nos vértices de um pentágono regulado por `(Math.PI * 2) / 5`.
+- **Familiares**: Posições simétricas em torno do personagem acompanhando a formação pentagonal de 1 a 5 unidades.
+
+---
+
+### 7. Sistema de Fusões Funcionais no Gameplay
+- **Liberador**: Quando ambas as magias componentes atingem Lv. 5 (ex: Chama 5 + Orbes 5), a fusão correspondente é desbloqueada no Grimório.
+- **Fusões Ativas**:
+  1. **Inferno Arcano** (Chama 5 + Orbes 5): Dispara orbes gigantes que entram em erupção em área.
+  2. **Tempestade Glacial** (Gelo 5 + Raio 5): Nevasca permanente que dispara raios congelantes em cadeia.
+  3. **Abismo** (Vórtice 5 + Familiar 5): Familiares ganham auras de vórtice sombrio próprio.
+- **Manutenção**: As magias originais continuam ativas normalmente.
+
+---
+
+## Modificações nos Arquivos
+
+### [MODIFY] [sprites.js](file:///c:/Users/Aluno/Desktop/primeiro-projeto/src/assets/sprites.js)
+- Registrar novas chaves no objeto `SPRITES` (`lavaPool`, `meteor`, `vines`, `humidityCloud`, `nukeFlash`, `fusionInferno`, `fusionTempestade`, `fusionAbismo`).
+
+### [MODIFY] [App.js](file:///c:/Users/Aluno/Desktop/primeiro-projeto/src/App.js)
+- Adicionar definições das 4 novas magias em `SPELLS`.
+- Adicionar estado inicial de lava, meteoros, vinhas, umidade e fusões em `gameRef.current`.
+- Atualizar `triggerLevelUp` para filtrar magias no Lv. 5 e incluir fusões desbloqueadas.
+- Atualizar a distribuição angular de Familiares e Orbes para fórmula pentagonal.
+- Atualizar a bomba atômica para o novo pipeline visual de flash/partículas/shockwave.
+- Adicionar renderização de Runas Nórdicas antes do personagem (`drawPlayer`).
+- Implementar as reações elementais da Umidade com Chama, Raio, Gelo e Vinhas.
+
+### [MODIFY] [App.css](file:///c:/Users/Aluno/Desktop/primeiro-projeto/src/App.css)
+- Adicionar suporte CSS para novos ícones, cartões de fusão desbloqueada e notificações.
+
+---
+
+## Plano de Verificação
+
+### Compilação Automatizada
+- Executar `npm run build` para validar zero erros de compilação ou sintaxe.
+
+### Verificação Manual no Canvas / HUD
+1. **Novas Magias**: Adquirir e testar Poças de Lava, Meteoro, Vinhas Sombrias e Umidade Arcana.
+2. **Reações Elementais**: Testar a gota `💧` em inimigos molhados e acionar Chama (vapor), Raio (cadeia 3x), Gelo (congelamento 3x) e Vinhas (prisão 3x).
+3. **Pentágono**: Verificar distribuição simétrica de 1 a 5 Familiares e Orbes de Fogo.
+4. **Filtro Lv. 5 & Fusões**: Maximizar magias até Lv. 5, confirmar que desaparecem do Grimório e verificar se a Fusão correspondente aparece e ativa.
+5. **Runas Nórdicas**: Verificar o desenho da runa abaixo do personagem com glow.
+6. **Bomba Atômica**: Acionar baú de bomba atômica e observar o clarão/flash global.
+7. **Boss Balanced**: Verificar tamanho e HP reduzidos do boss.

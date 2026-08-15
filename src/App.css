@@ -335,6 +335,22 @@ button {
   color: #745c42;
 }
 
+.combination.unlocked {
+  background: rgba(255, 215, 0, 0.15);
+  border-radius: 6px;
+  border-bottom: 1px solid rgba(212, 175, 55, 0.5);
+}
+
+.fusion-choice {
+  background: linear-gradient(135deg, rgba(255, 215, 0, 0.35), rgba(138, 43, 226, 0.35)) !important;
+  border: 1px solid rgba(255, 215, 0, 0.8) !important;
+}
+
+.fusion-mini {
+  border-color: rgba(255, 215, 0, 0.6) !important;
+  background: rgba(45, 20, 60, 0.85) !important;
+}
+
 .future {
   margin-top: 28px;
   padding: 12px;

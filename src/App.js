@@ -44,20 +44,48 @@ const SPELLS = {
     icon: "🌑",
     description:
       "Cria um vórtice ao redor do personagem que desacelera e causa dano por segundo.",
-    max: 8,
+    max: 5,
   },
   orbitFire: {
     name: "Orbes de Fogo",
     icon: "🔴",
     description:
-      "Cria bolas de fogo que orbitam o personagem e depois atacam.",
+      "Cria bolas de fogo que orbitam o personagem em pentágono e atacam.",
     max: 5,
   },
   familiar: {
     name: "Familiar",
     icon: "👻",
     description:
-      "Invoca um auxiliar mágico que flutua próximo ao bruxo e dispara contra inimigos.",
+      "Invoca auxiliares mágicos em formação pentagonal que disparam contra inimigos.",
+    max: 5,
+  },
+  lava: {
+    name: "Poças de Lava",
+    icon: "🌋",
+    description:
+      "Cria poças de lava no chão que causam dano contínuo aos inimigos sobre elas.",
+    max: 5,
+  },
+  meteor: {
+    name: "Meteoro",
+    icon: "☄️",
+    description:
+      "Chove meteoros incandescentes que causam grandes explosões em área.",
+    max: 5,
+  },
+  vines: {
+    name: "Vinhas Sombrias",
+    icon: "🌿",
+    description:
+      "Brotam vinhas espinhosas sob os inimigos e os enraízam no local.",
+    max: 5,
+  },
+  humidity: {
+    name: "Umidade Arcana",
+    icon: "💧",
+    description:
+      "Cria uma névoa arcana ao redor do bruxo que molha inimigos e gera reações elementais.",
     max: 5,
   },
 };
@@ -91,12 +119,13 @@ const ARTIFACTS = {
     name: "Símbolo da Repulsão",
     icon: "✦",
     description:
-      "A cada 15 segundos cria uma grande runa que empurra os inimigos.",
+      "A cada 15 segundos ativa a Runa Nórdica de Repulsão abaixo do bruxo.",
   },
   healingRune: {
     name: "Símbolo da Vida",
     icon: "✚",
-    description: "A cada 15 segundos cria uma runa que restaura parte da vida.",
+    description:
+      "A cada 15 segundos ativa a Runa Nórdica de Vida para restaurar a saúde.",
   },
   stormSymbol: {
     name: "Símbolo da Tempestade",
@@ -107,30 +136,45 @@ const ARTIFACTS = {
 };
 
 /* =========================================================
-   COMBINAÇÕES
+   FUSÕES (COMBINAÇÕES DESBLOQUEÁVEIS NO LV 5)
 ========================================================= */
 
 const COMBINATIONS = [
   {
+    id: "inferno",
     name: "Inferno Arcano",
     a: "Chama",
     b: "Orbes de Fogo",
-    requirement: "Chama Nv. 5 + Orbes de Fogo Nv. 5",
+    keyA: "fire",
+    keyB: "orbitFire",
+    requirement: "Chama Nv. 5 + Orbes Nv. 5",
     icon: "🔥",
+    description:
+      "Fusão Suprema: Orbes flamejam com erupções devastadoras de magma.",
   },
   {
+    id: "tempestade",
     name: "Tempestade Glacial",
     a: "Gelo",
     b: "Raio",
+    keyA: "ice",
+    keyB: "lightning",
     requirement: "Gelo Nv. 5 + Raio Nv. 5",
     icon: "⚡",
+    description:
+      "Fusão Suprema: Nevasca contínua que dispara raios congelantes em cadeia.",
   },
   {
+    id: "abismo",
     name: "Abismo",
     a: "Vórtice Sombrio",
     b: "Familiar",
+    keyA: "shadow",
+    keyB: "familiar",
     requirement: "Vórtice Nv. 5 + Familiar Nv. 5",
     icon: "🌑",
+    description:
+      "Fusão Suprema: Familiares emanam auras de vórtice sombrio próprio.",
   },
 ];
 
@@ -214,6 +258,7 @@ function createEnemy(x, y, typeIndex) {
     hp: type.hp,
     frozen: 0,
     wet: 0,
+    rootedTimer: 0,
     shadowSlow: 0,
     dead: false,
     isBoss: false,
@@ -222,26 +267,27 @@ function createEnemy(x, y, typeIndex) {
 }
 
 /* =========================================================
-   CRIAÇÃO DO BOSS
+   CRIAÇÃO DO BOSS (REBALANCEADO: TAMANHO E HP REDUZIDOS)
 ========================================================= */
 
 function createBoss(player, wave) {
-  const bossHp = 1800 + (wave || 1) * 250;
+  const bossHp = 650 + (wave || 1) * 120; // Vida rebalanceada
 
   return {
     id: `boss-${Date.now()}-${Math.random()}`,
     name: "Bruxo Primordial",
-    x: player.x + randomBetween(-500, 500),
-    y: player.y + randomBetween(-500, 500),
+    x: player.x + randomBetween(-400, 400),
+    y: player.y + randomBetween(-400, 400),
     color: "#21152d",
     hp: bossHp,
     maxHp: bossHp,
-    speed: 12,
-    size: 55,
+    speed: 16,
+    size: 38, // Tamanho rebalanceado
     soul: "boss",
     soulXP: 250,
     frozen: 0,
     wet: 0,
+    rootedTimer: 0,
     shadowSlow: 0,
     dead: false,
     isBoss: true,
@@ -333,6 +379,8 @@ function App() {
     familiars: [],
     orbitBalls: [],
     artifacts: [],
+    lavaPools: [],
+    meteors: [],
 
     spells: {
       fire: 1,
@@ -341,6 +389,16 @@ function App() {
       shadow: 0,
       orbitFire: 0,
       familiar: 0,
+      lava: 0,
+      meteor: 0,
+      vines: 0,
+      humidity: 0,
+    },
+
+    fusions: {
+      inferno: false,
+      tempestade: false,
+      abismo: false,
     },
 
     keys: {},
@@ -352,6 +410,10 @@ function App() {
     fireTimer: 0,
     iceTimer: 0,
     lightningTimer: 0,
+    lavaTimer: 0,
+    meteorTimer: 0,
+    vinesTimer: 0,
+    humidityTimer: 0,
     chestTimer: 10,
 
     xpMultiplier: 1,
@@ -422,6 +484,8 @@ function App() {
       familiars: [],
       orbitBalls: [],
       artifacts: [],
+      lavaPools: [],
+      meteors: [],
       spells: {
         fire: 1,
         ice: 0,
@@ -429,6 +493,15 @@ function App() {
         shadow: 0,
         orbitFire: 0,
         familiar: 0,
+        lava: 0,
+        meteor: 0,
+        vines: 0,
+        humidity: 0,
+      },
+      fusions: {
+        inferno: false,
+        tempestade: false,
+        abismo: false,
       },
       keys: {},
       time: 0,
@@ -438,6 +511,10 @@ function App() {
       fireTimer: 0,
       iceTimer: 0,
       lightningTimer: 0,
+      lavaTimer: 0,
+      meteorTimer: 0,
+      vinesTimer: 0,
+      humidityTimer: 0,
       chestTimer: 10,
       xpMultiplier: 1,
       xpMultiplierTimer: 0,
@@ -508,65 +585,97 @@ function App() {
   }
 
   /* =======================================================
-     LEVEL UP
+     LEVEL UP & FILTRAGEM ESTREITA LV. 5 E FUSÕES
   ======================================================= */
 
   function triggerLevelUp() {
     const game = gameRef.current;
     game.paused = true;
 
-    const available = Object.keys(SPELLS)
-      .filter((key) => game.spells[key] < SPELLS[key].max)
-      .sort(() => Math.random() - 0.5)
-      .slice(0, 3);
+    /*
+      Filtragem estrita:
+      Magias com nível igual ou superior a 5 NÃO aparecem mais como opção.
+    */
+    const availableSpells = Object.keys(SPELLS).filter(
+      (key) => game.spells[key] < SPELLS[key].max
+    );
 
-    if (available.length === 0) {
-      const fallback = Object.keys(SPELLS)
-        .sort(() => Math.random() - 0.5)
-        .slice(0, 3);
+    /*
+      Verifica se alguma Fusão atende aos requisitos de dual Lv. 5
+      e ainda não foi obtida.
+    */
+    const availableFusions = COMBINATIONS.filter((combo) => {
+      const hasA = game.spells[combo.keyA] >= 5;
+      const hasB = game.spells[combo.keyB] >= 5;
+      const alreadyFused = game.fusions[combo.id];
+      return hasA && hasB && !alreadyFused;
+    }).map((combo) => `fusion_${combo.id}`);
 
-      setLevelUpOptions(fallback);
-    } else {
-      setLevelUpOptions(available);
-    }
+    const pool = [...availableSpells, ...availableFusions].sort(
+      () => Math.random() - 0.5
+    );
 
+    const options = pool.slice(0, 3);
+
+    setLevelUpOptions(options);
     refreshUI();
   }
 
   /* =======================================================
-     ESCOLHER MAGIA
+     ESCOLHER MAGIA / FUSÃO
   ======================================================= */
 
-  function chooseSpell(spellKey) {
+  function chooseSpell(choiceKey) {
     const game = gameRef.current;
-    if (!SPELLS[spellKey]) return;
 
-    game.spells[spellKey] = Math.min(
-      game.spells[spellKey] + 1,
-      SPELLS[spellKey].max
-    );
+    /* Se for uma Fusão */
+    if (choiceKey.startsWith("fusion_")) {
+      const fusionId = choiceKey.replace("fusion_", "");
+      game.fusions[fusionId] = true;
+      applyFusionEffect(fusionId);
+    } else if (SPELLS[choiceKey]) {
+      /* Se for uma Magia normal */
+      if (game.spells[choiceKey] < SPELLS[choiceKey].max) {
+        game.spells[choiceKey] += 1;
+        updateSpecialSpell(choiceKey);
+      }
+    }
 
-    updateSpecialSpell(spellKey);
     game.paused = false;
     setLevelUpOptions([]);
     refreshUI();
   }
 
   /* =======================================================
-     ATUALIZA MAGIAS ESPECIAIS
+     APLICA EFEITOS DE FUSÃO
+  ======================================================= */
+
+  function applyFusionEffect(fusionId) {
+    const game = gameRef.current;
+    game.effects.push({
+      type: "fusionUnlock",
+      x: game.player.x,
+      y: game.player.y,
+      fusionId,
+      timer: 3,
+    });
+  }
+
+  /* =======================================================
+     ATUALIZA MAGIAS ESPECIAIS (FORMALIZAÇÃO EM PENTÁGONO)
   ======================================================= */
 
   function updateSpecialSpell(spellKey) {
     const game = gameRef.current;
 
-    /* ORBES DE FOGO */
+    /* ORBES DE FOGO (Pentágono simétrico 360°/5) */
     if (spellKey === "orbitFire") {
       const amount = game.spells.orbitFire;
       while (game.orbitBalls.length < amount) {
+        const index = game.orbitBalls.length;
+        const baseAngle = (index * Math.PI * 2) / 5;
         game.orbitBalls.push({
-          angle:
-            game.orbitBalls.length *
-            ((Math.PI * 2) / Math.max(amount, 1)),
+          angle: baseAngle,
           timer: Math.random() * 5,
           state: "orbit",
           x: game.player.x,
@@ -575,14 +684,14 @@ function App() {
       }
     }
 
-    /* FAMILIARES */
+    /* FAMILIARES (Pentágono simétrico 360°/5) */
     if (spellKey === "familiar") {
       const amount = game.spells.familiar;
       while (game.familiars.length < amount) {
+        const index = game.familiars.length;
+        const baseAngle = (index * Math.PI * 2) / 5;
         game.familiars.push({
-          angle:
-            game.familiars.length *
-            ((Math.PI * 2) / Math.max(amount, 1)),
+          angle: baseAngle,
           timer: Math.random() * 1.2,
           x: game.player.x,
           y: game.player.y,
@@ -685,7 +794,7 @@ function App() {
   }
 
   /* =======================================================
-     MAGIA DE FOGO
+     MAGIA DE FOGO & REAÇÃO ELEMENTAL DE VAPOR (UMIDADE + CHAMA)
   ======================================================= */
 
   function castFire() {
@@ -719,7 +828,7 @@ function App() {
   }
 
   /* =======================================================
-     MAGIA DE GELO
+     MAGIA DE GELO & REAÇÃO ELEMENTAL (UMIDADE + GELO = 3X FREEEZE)
   ======================================================= */
 
   function castIce() {
@@ -734,7 +843,10 @@ function App() {
       .slice(0, Math.min(amount, 5));
 
     for (const enemy of targets) {
-      enemy.frozen = 2.5;
+      /* Reação com Umidade: se estiver molhado, congelamento é multiplicado por 3 */
+      const freezeMult = enemy.wet > 0 ? 3 : 1;
+      enemy.frozen = 2.5 * freezeMult;
+
       damageEnemy(enemy, 18);
 
       game.effects.push({
@@ -747,7 +859,7 @@ function App() {
   }
 
   /* =======================================================
-     MAGIA DE RAIO
+     MAGIA DE RAIO & REAÇÃO ELEMENTAL (UMIDADE + RAIO = CADEIA 3X)
   ======================================================= */
 
   function castLightning() {
@@ -771,8 +883,179 @@ function App() {
 
       killEnemy(enemy);
 
-      if (game.stormActive && enemy.wet > 0) {
+      /* Reação com Umidade: atinge até 3 inimigos próximos molhados */
+      if (enemy.wet > 0 || game.stormActive) {
         lightningChain(enemy);
+      }
+    }
+  }
+
+  /* =======================================================
+     NOVA MAGIA 1 — POÇAS DE LAVA
+  ======================================================= */
+
+  function castLava() {
+    const game = gameRef.current;
+    const amount = game.spells.lava;
+    if (amount <= 0) return;
+
+    for (let i = 0; i < amount; i++) {
+      const angle = Math.random() * Math.PI * 2;
+      const dist = 60 + Math.random() * 260;
+
+      game.lavaPools.push({
+        id: `lava-${Date.now()}-${Math.random()}`,
+        x: game.player.x + Math.cos(angle) * dist,
+        y: game.player.y + Math.sin(angle) * dist,
+        radius: 45 + amount * 3,
+        duration: 6,
+        damagePerSec: 35 + amount * 5,
+      });
+    }
+  }
+
+  function updateLavaPools(dt) {
+    const game = gameRef.current;
+
+    for (const pool of game.lavaPools) {
+      pool.duration -= dt;
+
+      for (const enemy of game.enemies) {
+        if (enemy.dead) continue;
+        if (distance(pool, enemy) <= pool.radius) {
+          damageEnemy(enemy, pool.damagePerSec * dt);
+        }
+      }
+    }
+
+    game.lavaPools = game.lavaPools.filter((pool) => pool.duration > 0);
+  }
+
+  /* =======================================================
+     NOVA MAGIA 2 — METEORO
+  ======================================================= */
+
+  function castMeteor() {
+    const game = gameRef.current;
+    const amount = game.spells.meteor;
+    if (amount <= 0) return;
+
+    for (let i = 0; i < amount; i++) {
+      const targetEnemy = getClosestEnemy(
+        game.player.x + randomBetween(-300, 300),
+        game.player.y + randomBetween(-300, 300)
+      );
+
+      const targetX = targetEnemy ? targetEnemy.x : game.player.x + randomBetween(-250, 250);
+      const targetY = targetEnemy ? targetEnemy.y : game.player.y + randomBetween(-250, 250);
+
+      game.meteors.push({
+        id: `meteor-${Date.now()}-${Math.random()}`,
+        x: targetX,
+        y: targetY,
+        startX: targetX + 180,
+        startY: targetY - 400,
+        currentX: targetX + 180,
+        currentY: targetY - 400,
+        timer: 0.7, // tempo de aviso e queda
+        radius: 65 + amount * 8,
+        damage: 130 + amount * 25,
+        exploded: false,
+      });
+    }
+  }
+
+  function updateMeteors(dt) {
+    const game = gameRef.current;
+
+    for (const m of game.meteors) {
+      if (m.exploded) continue;
+
+      m.timer -= dt;
+      const progress = clamp(1 - m.timer / 0.7, 0, 1);
+      m.currentX = m.startX + (m.x - m.startX) * progress;
+      m.currentY = m.startY + (m.y - m.startY) * progress;
+
+      if (m.timer <= 0) {
+        m.exploded = true;
+
+        /* Explosão em área */
+        game.effects.push({
+          type: "meteorExplosion",
+          x: m.x,
+          y: m.y,
+          radius: m.radius,
+          timer: 0.6,
+        });
+
+        for (const enemy of game.enemies) {
+          if (enemy.dead) continue;
+          if (distance(m, enemy) <= m.radius) {
+            damageEnemy(enemy, m.damage);
+          }
+        }
+      }
+    }
+
+    game.meteors = game.meteors.filter((m) => !m.exploded);
+  }
+
+  /* =======================================================
+     NOVA MAGIA 3 — VINHAS SOMBRIAS (3 A 15 INIMIGOS)
+  ======================================================= */
+
+  function castVines() {
+    const game = gameRef.current;
+    const level = game.spells.vines;
+    if (level <= 0) return;
+
+    /* Progressão obrigatória: 3, 6, 9, 12, 15 */
+    const count = level * 3;
+
+    const targets = [...game.enemies]
+      .filter((enemy) => !enemy.dead && enemy.rootedTimer <= 0)
+      .sort((a, b) => distance(game.player, a) - distance(game.player, b))
+      .slice(0, count);
+
+    for (const enemy of targets) {
+      /* Reação com Umidade: duração da prisão é multiplicada por 3 */
+      const vineMult = enemy.wet > 0 ? 3 : 1;
+      enemy.rootedTimer = 3.5 * vineMult;
+
+      damageEnemy(enemy, 25);
+
+      game.effects.push({
+        type: "vinesGrasp",
+        x: enemy.x,
+        y: enemy.y,
+        timer: enemy.rootedTimer,
+      });
+    }
+  }
+
+  /* =======================================================
+     NOVA MAGIA 4 — UMIDADE ARCANA
+  ======================================================= */
+
+  function castHumidity() {
+    const game = gameRef.current;
+    const level = game.spells.humidity;
+    if (level <= 0) return;
+
+    const radius = 110 + level * 25;
+
+    game.effects.push({
+      type: "humidityCloud",
+      x: game.player.x,
+      y: game.player.y,
+      radius,
+      timer: 5,
+    });
+
+    for (const enemy of game.enemies) {
+      if (enemy.dead) continue;
+      if (distance(game.player, enemy) <= radius) {
+        enemy.wet = 8;
       }
     }
   }
@@ -813,7 +1096,7 @@ function App() {
   }
 
   /* =======================================================
-     ORBES DE FOGO
+     ORBES DE FOGO (FORMAÇÃO DE PENTÁGONO)
   ======================================================= */
 
   function updateOrbitBalls(dt) {
@@ -827,12 +1110,11 @@ function App() {
     game.orbitBalls.forEach((ball, index) => {
       ball.angle += dt * 1.5;
 
-      ball.x =
-        game.player.x +
-        Math.cos(ball.angle + (index * Math.PI * 2) / amount) * radius;
-      ball.y =
-        game.player.y +
-        Math.sin(ball.angle + (index * Math.PI * 2) / amount) * radius;
+      /* Formação Pentagonal (base 360° / 5) */
+      const baseOffset = (index * Math.PI * 2) / 5;
+
+      ball.x = game.player.x + Math.cos(ball.angle + baseOffset) * radius;
+      ball.y = game.player.y + Math.sin(ball.angle + baseOffset) * radius;
 
       ball.timer += dt;
 
@@ -841,16 +1123,19 @@ function App() {
         if (enemy) {
           const angle = Math.atan2(enemy.y - ball.y, enemy.x - ball.x);
 
+          /* Fusão Inferno Arcano: orbes maiores com explosões */
+          const isInferno = game.fusions.inferno;
+
           game.projectiles.push({
-            type: "orbit",
+            type: isInferno ? "orbitInferno" : "orbit",
             x: ball.x,
             y: ball.y,
-            vx: Math.cos(angle) * 480,
-            vy: Math.sin(angle) * 480,
-            damage: 50,
-            radius: 12,
+            vx: Math.cos(angle) * (isInferno ? 550 : 480),
+            vy: Math.sin(angle) * (isInferno ? 550 : 480),
+            damage: isInferno ? 110 : 50,
+            radius: isInferno ? 18 : 12,
             life: 2,
-            color: "#ff9d24",
+            color: isInferno ? "#ff3300" : "#ff9d24",
             ricochets: 0,
             pierced: 0,
           });
@@ -862,7 +1147,7 @@ function App() {
   }
 
   /* =======================================================
-     FAMILIARES
+     FAMILIARES (FORMAÇÃO DE PENTÁGONO)
   ======================================================= */
 
   function updateFamiliars(dt) {
@@ -875,12 +1160,21 @@ function App() {
       familiar.angle += dt;
       const radius = 95;
 
-      familiar.x =
-        game.player.x +
-        Math.cos(familiar.angle + (index * Math.PI * 2) / amount) * radius;
-      familiar.y =
-        game.player.y +
-        Math.sin(familiar.angle + (index * Math.PI * 2) / amount) * radius;
+      /* Formação Pentagonal (base 360° / 5) */
+      const baseOffset = (index * Math.PI * 2) / 5;
+
+      familiar.x = game.player.x + Math.cos(familiar.angle + baseOffset) * radius;
+      familiar.y = game.player.y + Math.sin(familiar.angle + baseOffset) * radius;
+
+      /* Fusão Abismo: familiar emana aura de vórtice próprio */
+      if (game.fusions.abismo) {
+        for (const enemy of game.enemies) {
+          if (enemy.dead) continue;
+          if (distance(familiar, enemy) <= 50) {
+            damageEnemy(enemy, 15 * dt);
+          }
+        }
+      }
 
       familiar.timer -= dt;
 
@@ -962,7 +1256,19 @@ function App() {
           }
           projectile.hitEnemies.push(enemy.id);
 
-          damageEnemy(enemy, projectile.damage);
+          /* Reação Elemental com Chama + Umidade = Dano de Vapor (+100%) */
+          let finalDamage = projectile.damage;
+          if (projectile.type === "fire" && enemy.wet > 0) {
+            finalDamage *= 2;
+            game.effects.push({
+              type: "steamCloud",
+              x: enemy.x,
+              y: enemy.y,
+              timer: 0.4,
+            });
+          }
+
+          damageEnemy(enemy, finalDamage);
 
           if (
             projectile.type === "fire" &&
@@ -999,6 +1305,13 @@ function App() {
     for (const enemy of game.enemies) {
       if (enemy.dead) continue;
 
+      /* Prisão de Vinhas */
+      if (enemy.rootedTimer > 0) {
+        enemy.rootedTimer -= dt;
+        continue; // Inimigo imóvel
+      }
+
+      /* Congelamento */
       if (enemy.frozen > 0) {
         enemy.frozen -= dt;
         continue;
@@ -1174,7 +1487,7 @@ function App() {
   }
 
   /* =======================================================
-     BOMBA ATÔMICA
+     BOMBA ATÔMICA (REFINAMENTO VISUAL IMPACTANTE: PREP, FLASH & SHOCKWAVE)
   ======================================================= */
 
   function triggerNuclearBomb() {
@@ -1189,13 +1502,28 @@ function App() {
 
     game.bombsUsed += 1;
 
+    /* Estágio 1: Carga */
     game.effects.push({
-      type: "nuclear",
+      type: "nuclearPrep",
+      x: game.player.x,
+      y: game.player.y,
+      timer: 0.3,
+    });
+
+    /* Estágio 2: Onda de choque expansiva */
+    game.effects.push({
+      type: "nuclearShockwave",
       x: game.player.x,
       y: game.player.y,
       radius: 0,
-      maxRadius: 1000,
-      timer: 2,
+      maxRadius: 1400,
+      timer: 1.5,
+    });
+
+    /* Estágio 3: Flash global iluminando a tela inteira */
+    game.effects.push({
+      type: "nuclearFlash",
+      timer: 1.2,
     });
 
     if (killed > 0) {
@@ -1356,7 +1684,7 @@ function App() {
     const radius = 180;
 
     game.effects.push({
-      type: "repulsionRune",
+      type: "repulsionRuneActive",
       x: game.player.x,
       y: game.player.y,
       radius,
@@ -1395,7 +1723,7 @@ function App() {
     game.player.hp = Math.min(game.player.maxHp, game.player.hp + 35);
 
     game.effects.push({
-      type: "healingRune",
+      type: "healingRuneActive",
       x: game.player.x,
       y: game.player.y,
       radius: 100,
@@ -1448,7 +1776,6 @@ function App() {
 
   function lightningChain(source) {
     const game = gameRef.current;
-    if (!game.stormActive) return;
 
     const targets = [...game.enemies]
       .filter((enemy) => !enemy.dead && enemy !== source && enemy.wet > 0)
@@ -1539,7 +1866,7 @@ function App() {
   }
 
   /* =======================================================
-     ATAQUES AUTOMÁTICOS
+     ATAQUES AUTOMÁTICOS DAS NOVAS E ANTIGAS MAGIAS
   ======================================================= */
 
   function updateAttackTimers(dt) {
@@ -1549,8 +1876,12 @@ function App() {
     game.fireTimer -= dt;
     game.iceTimer -= dt;
     game.lightningTimer -= dt;
+    game.lavaTimer -= dt;
+    game.meteorTimer -= dt;
+    game.vinesTimer -= dt;
+    game.humidityTimer -= dt;
 
-    /* TIRO BÁSICO (Sempre funciona) */
+    /* TIRO BÁSICO */
     if (game.basicTimer <= 0) {
       fireBasicShot();
       game.basicTimer = 0.65;
@@ -1573,6 +1904,30 @@ function App() {
       castLightning();
       game.lightningTimer = game.stormActive ? 0.8 : 4;
     }
+
+    /* POÇAS DE LAVA */
+    if (game.spells.lava > 0 && game.lavaTimer <= 0) {
+      castLava();
+      game.lavaTimer = 4.5;
+    }
+
+    /* METEORO */
+    if (game.spells.meteor > 0 && game.meteorTimer <= 0) {
+      castMeteor();
+      game.meteorTimer = 3.8;
+    }
+
+    /* VINHAS SOMBRIAS */
+    if (game.spells.vines > 0 && game.vinesTimer <= 0) {
+      castVines();
+      game.vinesTimer = 5;
+    }
+
+    /* UMIDADE ARCANA */
+    if (game.spells.humidity > 0 && game.humidityTimer <= 0) {
+      castHumidity();
+      game.humidityTimer = 6;
+    }
   }
 
   /* =======================================================
@@ -1584,10 +1939,11 @@ function App() {
 
     for (const effect of game.effects) {
       effect.timer -= dt;
-      if (effect.type === "nuclear") {
+
+      if (effect.type === "nuclearShockwave") {
         effect.radius = Math.min(
-          effect.maxRadius || 1000,
-          (effect.radius || 0) + 1200 * dt
+          effect.maxRadius || 1400,
+          (effect.radius || 0) + 1400 * dt
         );
       }
     }
@@ -1625,6 +1981,8 @@ function App() {
     updateOrbitBalls(dt);
     updateFamiliars(dt);
     updateShadow(dt);
+    updateLavaPools(dt);
+    updateMeteors(dt);
     updateSouls(dt);
     updateArtifacts(dt);
     checkChests();
@@ -1723,7 +2081,114 @@ function App() {
   }
 
   /* =======================================================
-     DESENHO DO JOGADOR
+     DESENHO DAS POÇAS DE LAVA
+  ======================================================= */
+
+  function drawLavaPools(ctx, game, camera, width, height) {
+    for (const pool of game.lavaPools) {
+      const p = worldToScreen(pool.x, pool.y, camera, width, height);
+
+      ctx.save();
+      drawSpriteOrFallback(
+        ctx,
+        "lavaPool",
+        () => {
+          ctx.shadowBlur = 25;
+          ctx.shadowColor = "#ff3300";
+
+          ctx.fillStyle = "rgba(255, 68, 0, 0.65)";
+          ctx.beginPath();
+          ctx.arc(p.x, p.y, pool.radius, 0, Math.PI * 2);
+          ctx.fill();
+
+          ctx.fillStyle = "#ffcc00";
+          for (let i = 0; i < 4; i++) {
+            const angle = (game.time * 2 + i * 1.5) % (Math.PI * 2);
+            const bx = p.x + Math.cos(angle) * (pool.radius * 0.5);
+            const by = p.y + Math.sin(angle) * (pool.radius * 0.5);
+            ctx.beginPath();
+            ctx.arc(bx, by, 6, 0, Math.PI * 2);
+            ctx.fill();
+          }
+        },
+        p.x,
+        p.y,
+        pool.radius * 2,
+        pool.radius * 2
+      );
+      ctx.restore();
+    }
+  }
+
+  /* =======================================================
+     DESENHO DAS RUNAS NÓRDICAS SUB-JOGADOR
+  ======================================================= */
+
+  function drawPlayerRunes(ctx, game, camera, width, height) {
+    const p = worldToScreen(game.player.x, game.player.y, camera, width, height);
+    const runeRadius = 65; // ~3x tamanho do bruxo
+
+    ctx.save();
+    ctx.translate(p.x, p.y);
+
+    /* Runa da Repulsão (Nórdica: Algiz / Thurisaz) */
+    if (game.artifacts.includes("repulsionRune")) {
+      ctx.save();
+      ctx.shadowBlur = 20;
+      ctx.shadowColor = "#b86cff";
+      ctx.strokeStyle = "rgba(184, 108, 255, 0.75)";
+      ctx.lineWidth = 2.5;
+
+      /* Círculo externo animado */
+      const rot = game.time * 0.8;
+      ctx.rotate(rot);
+      ctx.beginPath();
+      ctx.arc(0, 0, runeRadius, 0, Math.PI * 2);
+      ctx.stroke();
+
+      /* Desenho procedural da Runa Algiz (ᛉ) */
+      ctx.beginPath();
+      ctx.moveTo(0, -runeRadius * 0.75);
+      ctx.lineTo(0, runeRadius * 0.75);
+      ctx.moveTo(0, -runeRadius * 0.2);
+      ctx.lineTo(-runeRadius * 0.45, -runeRadius * 0.65);
+      ctx.moveTo(0, -runeRadius * 0.2);
+      ctx.lineTo(runeRadius * 0.45, -runeRadius * 0.65);
+      ctx.stroke();
+      ctx.restore();
+    }
+
+    /* Runa da Vida / Cura (Nórdica: Berkanan ᛒ / Laguz ᛚ) */
+    if (game.artifacts.includes("healingRune")) {
+      ctx.save();
+      ctx.shadowBlur = 20;
+      ctx.shadowColor = "#55ff7c";
+      ctx.strokeStyle = "rgba(85, 255, 124, 0.75)";
+      ctx.lineWidth = 2.5;
+
+      const rot = -game.time * 0.6;
+      ctx.rotate(rot);
+      ctx.beginPath();
+      ctx.arc(0, 0, runeRadius * 0.85, 0, Math.PI * 2);
+      ctx.stroke();
+
+      /* Desenho procedural da Runa Berkanan (ᛒ) */
+      ctx.beginPath();
+      ctx.moveTo(-runeRadius * 0.3, -runeRadius * 0.6);
+      ctx.lineTo(-runeRadius * 0.3, runeRadius * 0.6);
+      ctx.lineTo(0, -runeRadius * 0.2);
+      ctx.lineTo(-runeRadius * 0.3, 0);
+      ctx.lineTo(0, runeRadius * 0.4);
+      ctx.lineTo(-runeRadius * 0.3, runeRadius * 0.6);
+      ctx.stroke();
+      ctx.restore();
+    }
+
+    ctx.restore();
+  }
+
+  /* =======================================================
+     DESENHO DO JOGADOR (RENDERIZADO POR CIMA DAS RUNAS)
   ======================================================= */
 
   function drawPlayer(ctx, player, camera, width, height) {
@@ -1817,7 +2282,7 @@ function App() {
   }
 
   /* =======================================================
-     DESENHO DO INIMIGO
+     DESENHO DO INIMIGO (COM ÍCONE 💧 SE ESTIVER MOLHADO)
   ======================================================= */
 
   function drawEnemy(ctx, enemy, camera, width, height) {
@@ -1827,11 +2292,11 @@ function App() {
     ctx.translate(p.x, p.y);
 
     const size = enemy.size;
-    const scale = enemy.isBoss ? 1.8 : 1;
+    const scale = enemy.isBoss ? 1.3 : 1; // Boss rebalanceado
     ctx.scale(scale, scale);
 
     if (enemy.isBoss) {
-      ctx.shadowBlur = 30;
+      ctx.shadowBlur = 25;
       ctx.shadowColor = "#9d3cff";
     }
 
@@ -1896,16 +2361,54 @@ function App() {
       ctx.stroke();
     }
 
-    /* Molhado */
+    /* Ícone de Gota de Água 💧 se estiver molhado */
     if (enemy.wet > 0) {
-      ctx.strokeStyle = "rgba(90,190,255,0.7)";
-      ctx.lineWidth = 2;
+      ctx.font = "14px serif";
+      ctx.textAlign = "center";
+      ctx.fillText("💧", 0, -size * 2.6);
+    }
+
+    /* Vinhas de Prisão */
+    if (enemy.rootedTimer > 0) {
+      ctx.strokeStyle = "#2d6a4f";
+      ctx.lineWidth = 4;
       ctx.beginPath();
-      ctx.arc(0, 0, size * 1.2, 0, Math.PI * 2);
+      ctx.arc(0, size * 0.8, size * 0.9, 0, Math.PI * 2);
       ctx.stroke();
     }
 
     ctx.restore();
+  }
+
+  /* =======================================================
+     DESENHO DE METEOROS
+  ======================================================= */
+
+  function drawMeteors(ctx, game, camera, width, height) {
+    for (const m of game.meteors) {
+      const targetP = worldToScreen(m.x, m.y, camera, width, height);
+
+      ctx.save();
+      /* Alvo no chão */
+      ctx.strokeStyle = "rgba(255, 60, 0, 0.85)";
+      ctx.lineWidth = 2;
+      ctx.setLineDash([6, 4]);
+      ctx.beginPath();
+      ctx.arc(targetP.x, targetP.y, m.radius, 0, Math.PI * 2);
+      ctx.stroke();
+
+      /* Meteoro caindo */
+      const currP = worldToScreen(m.currentX, m.currentY, camera, width, height);
+      ctx.shadowBlur = 20;
+      ctx.shadowColor = "#ff5500";
+      ctx.fillStyle = "#ffaa00";
+
+      ctx.beginPath();
+      ctx.arc(currP.x, currP.y, 16, 0, Math.PI * 2);
+      ctx.fill();
+
+      ctx.restore();
+    }
   }
 
   /* =======================================================
@@ -1939,11 +2442,11 @@ function App() {
 
       ctx.save();
       ctx.shadowBlur = 25;
-      ctx.shadowColor = "#ff6b18";
-      ctx.fillStyle = "#ff7b22";
+      ctx.shadowColor = game.fusions.inferno ? "#ff2200" : "#ff6b18";
+      ctx.fillStyle = game.fusions.inferno ? "#ff3300" : "#ff7b22";
 
       ctx.beginPath();
-      ctx.arc(p.x, p.y, 11, 0, Math.PI * 2);
+      ctx.arc(p.x, p.y, game.fusions.inferno ? 16 : 11, 0, Math.PI * 2);
       ctx.fill();
 
       ctx.fillStyle = "#ffd166";
@@ -1965,8 +2468,8 @@ function App() {
 
       ctx.save();
       ctx.shadowBlur = 20;
-      ctx.shadowColor = "#b978ff";
-      ctx.fillStyle = "#d9b4ff";
+      ctx.shadowColor = game.fusions.abismo ? "#800080" : "#b978ff";
+      ctx.fillStyle = game.fusions.abismo ? "#4b0082" : "#d9b4ff";
 
       ctx.beginPath();
       ctx.moveTo(p.x, p.y - 14);
@@ -2055,7 +2558,7 @@ function App() {
   }
 
   /* =======================================================
-     DESENHO DE EFEITOS
+     DESENHO DE EFEITOS & FLASH DA BOMBA
   ======================================================= */
 
   function drawEffects(ctx, game, camera, width, height) {
@@ -2063,6 +2566,29 @@ function App() {
       const p = worldToScreen(effect.x, effect.y, camera, width, height);
 
       ctx.save();
+
+      if (effect.type === "meteorExplosion") {
+        ctx.shadowBlur = 30;
+        ctx.shadowColor = "#ff3300";
+        ctx.fillStyle = "rgba(255, 102, 0, 0.6)";
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, effect.radius, 0, Math.PI * 2);
+        ctx.fill();
+      }
+
+      if (effect.type === "humidityCloud") {
+        ctx.fillStyle = "rgba(100, 200, 255, 0.15)";
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, effect.radius, 0, Math.PI * 2);
+        ctx.fill();
+      }
+
+      if (effect.type === "steamCloud") {
+        ctx.fillStyle = "rgba(230, 230, 250, 0.4)";
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, 25, 0, Math.PI * 2);
+        ctx.fill();
+      }
 
       if (effect.type === "lightning") {
         ctx.shadowBlur = 25;
@@ -2130,47 +2656,7 @@ function App() {
         ctx.restore();
       }
 
-      if (effect.type === "repulsionRune") {
-        ctx.strokeStyle = "#d4a6ff";
-        ctx.shadowBlur = 20;
-        ctx.shadowColor = "#b86cff";
-        ctx.lineWidth = 3;
-
-        ctx.beginPath();
-        ctx.arc(p.x, p.y, effect.radius, 0, Math.PI * 2);
-        ctx.stroke();
-
-        for (let i = 0; i < 8; i++) {
-          const angle = (Math.PI * 2 * i) / 8;
-          ctx.beginPath();
-          ctx.moveTo(p.x, p.y);
-          ctx.lineTo(
-            p.x + Math.cos(angle) * effect.radius,
-            p.y + Math.sin(angle) * effect.radius
-          );
-          ctx.stroke();
-        }
-      }
-
-      if (effect.type === "healingRune") {
-        ctx.strokeStyle = "#7dff9b";
-        ctx.shadowBlur = 20;
-        ctx.shadowColor = "#55ff7c";
-        ctx.lineWidth = 4;
-
-        ctx.beginPath();
-        ctx.arc(p.x, p.y, effect.radius, 0, Math.PI * 2);
-        ctx.stroke();
-
-        ctx.beginPath();
-        ctx.moveTo(p.x - 25, p.y);
-        ctx.lineTo(p.x + 25, p.y);
-        ctx.moveTo(p.x, p.y - 25);
-        ctx.lineTo(p.x, p.y + 25);
-        ctx.stroke();
-      }
-
-      if (effect.type === "nuclear") {
+      if (effect.type === "nuclearShockwave") {
         ctx.strokeStyle = "#fff2a6";
         ctx.shadowBlur = 40;
         ctx.shadowColor = "#ffb52e";
@@ -2179,11 +2665,12 @@ function App() {
         ctx.beginPath();
         ctx.arc(p.x, p.y, effect.radius || 0, 0, Math.PI * 2);
         ctx.stroke();
+      }
 
-        ctx.fillStyle = "rgba(255,180,50,0.08)";
-        ctx.beginPath();
-        ctx.arc(p.x, p.y, effect.radius || 0, 0, Math.PI * 2);
-        ctx.fill();
+      if (effect.type === "nuclearFlash") {
+        const alpha = clamp(effect.timer / 1.2, 0, 1);
+        ctx.fillStyle = `rgba(255, 255, 255, ${alpha * 0.85})`;
+        ctx.fillRect(0, 0, width, height);
       }
 
       if (effect.type === "death") {
@@ -2243,10 +2730,13 @@ function App() {
     ctx.clearRect(0, 0, width, height);
 
     drawBackground(ctx, width, height, game.camera);
+    drawLavaPools(ctx, game, game.camera, width, height);
+    drawPlayerRunes(ctx, game, game.camera, width, height); // Runas desenhadas abaixo do jogador
     drawStorm(ctx, game, width, height);
 
     drawChests(ctx, game, game.camera, width, height);
     drawSouls(ctx, game, game.camera, width, height);
+    drawMeteors(ctx, game, game.camera, width, height);
 
     for (const enemy of game.enemies) {
       drawEnemy(ctx, enemy, game.camera, width, height);
@@ -2255,7 +2745,7 @@ function App() {
     drawOrbits(ctx, game, game.camera, width, height);
     drawFamiliars(ctx, game, game.camera, width, height);
     drawProjectiles(ctx, game, game.camera, width, height);
-    drawPlayer(ctx, game.player, game.camera, width, height);
+    drawPlayer(ctx, game.player, game.camera, width, height); // Jogador desenhado por cima das runas
     drawEffects(ctx, game, game.camera, width, height);
   }
 
@@ -2363,9 +2853,21 @@ function App() {
               <div className="spell-mini" key={key}>
                 <span>{SPELLS[key].icon}</span>
                 <span>{SPELLS[key].name}</span>
-                <b>{level}</b>
+                <b>{level}/5</b>
               </div>
             ))}
+          {Object.entries(game.fusions)
+            .filter(([, active]) => active)
+            .map(([fusionId]) => {
+              const combo = COMBINATIONS.find((c) => c.id === fusionId);
+              return (
+                <div className="spell-mini fusion-mini" key={fusionId}>
+                  <span>{combo?.icon || "🔮"}</span>
+                  <span>{combo?.name || fusionId}</span>
+                  <b>MAX</b>
+                </div>
+              );
+            })}
         </div>
       </div>
 
@@ -2374,44 +2876,79 @@ function App() {
           <div className="spellbook">
             <div className="book-page left-page">
               <div className="book-title">✦ GRIMÓRIO ✦</div>
-              <p className="book-subtitle">Escolha uma magia</p>
+              <p className="book-subtitle">Escolha uma magia ou fusão</p>
               <div className="choices">
-                {levelUpOptions.map((spellKey) => (
-                  <button
-                    className="spell-choice"
-                    key={spellKey}
-                    onClick={() => chooseSpell(spellKey)}
-                  >
-                    <span className="choice-icon">{SPELLS[spellKey].icon}</span>
-                    <span className="choice-name">{SPELLS[spellKey].name}</span>
-                    <span className="choice-level">
-                      Nv. {game.spells[spellKey] + 1}/{SPELLS[spellKey].max}
-                    </span>
-                    <span className="choice-description">
-                      {SPELLS[spellKey].description}
-                    </span>
-                  </button>
-                ))}
+                {levelUpOptions.map((choiceKey) => {
+                  /* Se for uma opção de Fusão */
+                  if (choiceKey.startsWith("fusion_")) {
+                    const fusionId = choiceKey.replace("fusion_", "");
+                    const combo = COMBINATIONS.find((c) => c.id === fusionId);
+                    return (
+                      <button
+                        className="spell-choice fusion-choice"
+                        key={choiceKey}
+                        onClick={() => chooseSpell(choiceKey)}
+                      >
+                        <span className="choice-icon">{combo.icon}</span>
+                        <span className="choice-name">{combo.name}</span>
+                        <span className="choice-level">✧ FUSÃO ✧</span>
+                        <span className="choice-description">
+                          {combo.description}
+                        </span>
+                      </button>
+                    );
+                  }
+
+                  const spell = SPELLS[choiceKey];
+                  return (
+                    <button
+                      className="spell-choice"
+                      key={choiceKey}
+                      onClick={() => chooseSpell(choiceKey)}
+                    >
+                      <span className="choice-icon">{spell.icon}</span>
+                      <span className="choice-name">{spell.name}</span>
+                      <span className="choice-level">
+                        Nv. {game.spells[choiceKey] + 1}/{spell.max}
+                      </span>
+                      <span className="choice-description">
+                        {spell.description}
+                      </span>
+                    </button>
+                  );
+                })}
               </div>
             </div>
 
             <div className="book-page right-page">
               <div className="book-title">✧ FUSÕES ✧</div>
-              <p className="book-subtitle">Combinações</p>
-              {COMBINATIONS.map((combo) => (
-                <div className="combination" key={combo.name}>
-                  <div className="combo-icon">{combo.icon}</div>
-                  <div>
-                    <strong>{combo.name}</strong>
-                    <div className="combo-spells">
-                      {combo.a} + {combo.b}
-                    </div>
-                    <div className="combo-requirement">
-                      🔒 {combo.requirement}
+              <p className="book-subtitle">Combinações Desbloqueáveis</p>
+              {COMBINATIONS.map((combo) => {
+                const isUnlocked =
+                  game.spells[combo.keyA] >= 5 && game.spells[combo.keyB] >= 5;
+                const isAcquired = game.fusions[combo.id];
+
+                return (
+                  <div
+                    className={`combination ${isUnlocked ? "unlocked" : ""}`}
+                    key={combo.id}
+                  >
+                    <div className="combo-icon">{combo.icon}</div>
+                    <div>
+                      <strong>
+                        {combo.name}{" "}
+                        {isAcquired ? "✓" : isUnlocked ? "🔓 APTO" : "🔒"}
+                      </strong>
+                      <div className="combo-spells">
+                        {combo.a} + {combo.b}
+                      </div>
+                      <div className="combo-requirement">
+                        {combo.requirement}
+                      </div>
                     </div>
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           </div>
         </div>
