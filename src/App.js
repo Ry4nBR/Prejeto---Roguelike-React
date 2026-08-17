@@ -9,6 +9,7 @@ import { drawSpriteOrFallback } from "./assets/sprites";
 const WORLD_SIZE = 100000;
 const WAVE_DURATION = 30;
 const BOSS_EVERY_WAVES = 5;
+const MAX_ENEMIES_CAP = 110;
 
 const PLAYER_START_X = WORLD_SIZE / 2;
 const PLAYER_START_Y = WORLD_SIZE / 2;
@@ -16,79 +17,341 @@ const PLAYER_START_Y = WORLD_SIZE / 2;
 const INITIAL_XP_NEEDED = 60;
 
 /* =========================================================
-   MAGIAS
+   OS 10 PERSONAGENS
+========================================================= */
+
+const CHARACTERS = [
+  {
+    id: "ignis",
+    name: "Ignis",
+    title: "O Piromante",
+    spellKey: "fire",
+    icon: "🔥",
+    color: "#ff6b21",
+    unlocked: true,
+    spriteKey: "char_ignis",
+    description: "Mestre das chamas primordiais que incinera hordas com projéteis incandescentes de fogo.",
+  },
+  {
+    id: "eira",
+    name: "Eira",
+    title: "A Feiticeira Glacial",
+    spellKey: "ice",
+    icon: "❄️",
+    color: "#6be5ff",
+    unlocked: true,
+    spriteKey: "char_eira",
+    description: "Feiticeira das terras gélidas que congela e estilhaça inimigos com raios de gelo.",
+  },
+  {
+    id: "voltis",
+    name: "Voltis",
+    title: "O Condutor",
+    spellKey: "lightning",
+    icon: "⚡",
+    color: "#ffd54f",
+    unlocked: true,
+    spriteKey: "char_voltis",
+    description: "Canalizador de tempestades elétricas devastadoras e relâmpagos em cadeia.",
+  },
+  {
+    id: "nox",
+    name: "Nox",
+    title: "O Arauto do Abismo",
+    spellKey: "shadow",
+    icon: "🌑",
+    color: "#b388ff",
+    unlocked: true,
+    spriteKey: "char_nox",
+    description: "Guardião do vazio que devora a velocidade e a vida dos inimigos próximos com vórtices sombrios.",
+  },
+  {
+    id: "pyra",
+    name: "Pyra",
+    title: "A Invocadora Ígnea",
+    spellKey: "orbitFire",
+    icon: "🔴",
+    color: "#ff5722",
+    unlocked: true,
+    spriteKey: "char_pyra",
+    description: "Invocadora de esferas orbitais flamejantes em formação geométrica sagrada.",
+  },
+  {
+    id: "morrigan",
+    name: "Morrigan",
+    title: "A Bruxa Espectral",
+    spellKey: "familiar",
+    icon: "👻",
+    color: "#ea80fc",
+    unlocked: true,
+    spriteKey: "char_morrigan",
+    description: "Bruxa arcana guiada por familiares espirituais que atacam incansavelmente à distância.",
+  },
+  {
+    id: "magmus",
+    name: "Magmus",
+    title: "O Senhor da Lava",
+    spellKey: "lava",
+    icon: "🌋",
+    color: "#ff3d00",
+    unlocked: true,
+    spriteKey: "char_magmus",
+    description: "Forjador vulcânico que cobre o solo com poças de magma fervente e destrutivo.",
+  },
+  {
+    id: "astrion",
+    name: "Astrion",
+    title: "O Astrólogo",
+    spellKey: "meteor",
+    icon: "☄️",
+    color: "#ff9100",
+    unlocked: true,
+    spriteKey: "char_astrion",
+    description: "Conjurador celestial que invoca meteoros cósmicos para aniquilar áreas inteiras.",
+  },
+  {
+    id: "sylva",
+    name: "Sylva",
+    title: "A Druida Sombria",
+    spellKey: "vines",
+    icon: "🌿",
+    color: "#76ff03",
+    unlocked: true,
+    spriteKey: "char_sylva",
+    description: "Guardiã da floresta sombria que invoca vinhas espinhosas para enraizar e estraçalhar seus alvos.",
+  },
+  {
+    id: "nymira",
+    name: "Nymira",
+    title: "A Maga da Névoa",
+    spellKey: "humidity",
+    icon: "💧",
+    color: "#00e5ff",
+    unlocked: true,
+    spriteKey: "char_nymira",
+    description: "Senhora das marés e névoas que confunde opositores e concede invencibilidade temporária.",
+  },
+];
+
+/* =========================================================
+   AS 10 MAGIAS
 ========================================================= */
 
 const SPELLS = {
   fire: {
+    id: "fire",
     name: "Chama",
     icon: "🔥",
-    description:
-      "Dispara projéteis de fogo. A cada nível aumenta a quantidade de tiros.",
+    type: "Ofensivo Direto",
+    description: "Dispara projéteis de fogo incandescente. Aumenta quantidade e dano.",
+    details: "Dispara projéteis de fogo em leque que incineram alvos à frente.",
     max: 5,
   },
   ice: {
+    id: "ice",
     name: "Gelo",
     icon: "❄️",
-    description: "Dispara raios congelantes. A quantidade aumenta até 5.",
+    type: "Controle & Dano",
+    description: "Dispara raios congelantes. Congela e desacelera inimigos (3x se molhados).",
+    details: "Paralisa inimigos atingidos e causa dano contínuo de frio cortante.",
     max: 5,
   },
   lightning: {
+    id: "lightning",
     name: "Raio",
     icon: "⚡",
-    description: "Invoca raios que eliminam instantaneamente um inimigo.",
+    type: "Eliminação Rápida",
+    description: "Invoca relâmpagos celestiais que eliminam inimigos instantaneamente.",
+    details: "Causa arcos elétricos que saltam entre inimigos próximos caso estejam molhados.",
     max: 5,
   },
   shadow: {
+    id: "shadow",
     name: "Vórtice Sombrio",
     icon: "🌑",
-    description:
-      "Cria um vórtice ao redor do personagem que desacelera e causa dano por segundo.",
+    type: "Aura Contínua",
+    description: "Cria um vórtice abissal ao redor do bruxo que desacelera e causa dano.",
+    details: "Área de drenagem que reduz o avanço dos inimigos e drena sua vida por segundo.",
     max: 5,
   },
   orbitFire: {
+    id: "orbitFire",
     name: "Orbes de Fogo",
     icon: "🔴",
-    description:
-      "Cria bolas de fogo que orbitam o personagem em pentágono e atacam.",
+    type: "Defesa Orbital",
+    description: "Invoca orbes de fogo em formação pentagonal simétrica que disparam periodicamente.",
+    details: "Esferas giratórias protetoras que disparam contra alvos próximos.",
     max: 5,
   },
   familiar: {
+    id: "familiar",
     name: "Familiar",
     icon: "👻",
-    description:
-      "Invoca auxiliares mágicos em formação pentagonal que disparam contra inimigos.",
+    type: "Invocação Suporte",
+    description: "Invoca familiares em formação pentagonal simétrica que disparam projéteis arcanos.",
+    details: "Espíritos auxiliares leais com disparo teleguiado e autônomo.",
     max: 5,
   },
   lava: {
+    id: "lava",
     name: "Poças de Lava",
     icon: "🌋",
-    description:
-      "Cria poças de lava no chão que causam dano contínuo aos inimigos sobre elas.",
+    type: "Área de Dano (DoT)",
+    description: "Cria poças de lava no chão que causam dano contínuo massivo por segundo.",
+    details: "Magma borbulhante deixado no solo para queimar qualquer inimigo que pisar.",
     max: 5,
   },
   meteor: {
+    id: "meteor",
     name: "Meteoro",
     icon: "☄️",
-    description:
-      "Chove meteoros incandescentes que causam grandes explosões em área.",
+    type: "Dano em Área Explosivo",
+    description: "Chove meteoros incandescentes com explosões devastadoras de alto impacto.",
+    details: "Impacto catastrófico que pulveriza grupos inteiros de monstros.",
     max: 5,
   },
   vines: {
+    id: "vines",
     name: "Vinhas Sombrias",
     icon: "🌿",
-    description:
-      "Brotam vinhas espinhosas sob os inimigos e os enraízam no local.",
+    type: "Enraizamento",
+    description: "Brotam vinhas espinhosas sob os inimigos e os enraízam completamente.",
+    details: "Prende os monstros ao chão, impedindo o movimento enquanto recebem dano.",
     max: 5,
   },
   humidity: {
+    id: "humidity",
     name: "Umidade Arcana",
     icon: "💧",
-    description:
-      "Cria uma névoa arcana ao redor do bruxo que molha inimigos e gera reações elementais.",
+    type: "Névoa & Invencibilidade",
+    description: "Cria névoas pelo mapa que molham os inimigos e concedem invencibilidade ao bruxo.",
+    details: "Permite ao jogador atravessar hordas sem sofrer dano enquanto estiver dentro da névoa.",
     max: 5,
   },
 };
+
+/* =========================================================
+   AS 5 FUSÕES SUPREMAS
+========================================================= */
+
+const COMBINATIONS = [
+  {
+    id: "vaporInfernal",
+    name: "Vapor Infernal",
+    icon: "♨️",
+    a: "Chama",
+    b: "Gelo",
+    keyA: "fire",
+    keyB: "ice",
+    requirement: "Chama Nv. 5 + Gelo Nv. 5",
+    description: "Cria vapor ofensivo e combina dano contínuo de fogo + gelo com desaceleração.",
+  },
+  {
+    id: "florestaEletrica",
+    name: "Geração de Floresta",
+    icon: "⚡🌿",
+    a: "Raio",
+    b: "Vinhas",
+    keyA: "lightning",
+    keyB: "vines",
+    requirement: "Raio Nv. 5 + Vinhas Nv. 5",
+    description: "Mortes por raio brotam Plantas Elétricas (máx. 5 por 5s) que disparam raios e geram reação em cadeia.",
+  },
+  {
+    id: "pantanoSombrio",
+    name: "Pântano Sombrio",
+    icon: "🌿💧",
+    a: "Vinhas",
+    b: "Umidade",
+    keyA: "vines",
+    keyB: "humidity",
+    requirement: "Vinhas Nv. 5 + Umidade Nv. 5",
+    description: "Cria áreas pantanosas que prendem e desaceleram inimigos em 70%, aplicando umidade e dano contínuo.",
+  },
+  {
+    id: "cataclismo",
+    name: "Cataclismo",
+    icon: "☄️🌋",
+    a: "Meteoro",
+    b: "Poças de Lava",
+    keyA: "meteor",
+    keyB: "lava",
+    requirement: "Meteoro Nv. 5 + Poças de Lava Nv. 5",
+    description: "Meteoros criam explosões devastadoras e deixam poças de lava duradouras no ponto de impacto.",
+  },
+  {
+    id: "abismoVivo",
+    name: "Abismo Vivo",
+    icon: "🌑👻",
+    a: "Vórtice Sombrio",
+    b: "Familiar",
+    keyA: "shadow",
+    keyB: "familiar",
+    requirement: "Vórtice Nv. 5 + Familiar Nv. 5",
+    description: "Combina o vórtice com os familiares, criando manifestações sombrias nos familiares que sugam e aniquilam inimigos.",
+  },
+];
+
+/* =========================================================
+   MAPAS
+========================================================= */
+
+const MAPS = [
+  {
+    id: "forest",
+    name: "Floresta Negra",
+    icon: "🌲",
+    description: "Bosque místico dominado por bruxos das sombras e criaturas espectrais.",
+    unlocked: true,
+  },
+  {
+    id: "crypt",
+    name: "Cripta Abissal",
+    icon: "🏛️",
+    description: "Catacumbas ancestrais seladas repletas de horrores antigos.",
+    unlocked: false,
+    lockText: "Em Breve — Bloqueado",
+  },
+];
+
+/* =========================================================
+   LOJA ARCANA (UPGRADES PERMANENTES)
+========================================================= */
+
+const SHOP_ITEMS = [
+  {
+    id: "maxHp",
+    name: "Vitalidade Arcana",
+    icon: "❤",
+    description: "+20 de Vida Máxima inicial por nível",
+    cost: 50,
+    maxLevel: 5,
+  },
+  {
+    id: "speed",
+    name: "Passos Etéreos",
+    icon: "👟",
+    description: "+8% de Velocidade de Movimento por nível",
+    cost: 50,
+    maxLevel: 5,
+  },
+  {
+    id: "damage",
+    name: "Poder Primordial",
+    icon: "⚔",
+    description: "+10% de Dano em todas as magias por nível",
+    cost: 75,
+    maxLevel: 5,
+  },
+  {
+    id: "magnet",
+    name: "Magnetismo Espiritual",
+    icon: "🧲",
+    description: "+25% no raio de atração de almas por nível",
+    cost: 60,
+    maxLevel: 5,
+  },
+];
 
 /* =========================================================
    ARTEFATOS
@@ -118,65 +381,19 @@ const ARTIFACTS = {
   repulsionRune: {
     name: "Símbolo da Repulsão",
     icon: "✦",
-    description:
-      "A cada 15 segundos ativa a Runa Nórdica de Repulsão abaixo do bruxo.",
+    description: "A cada 15s ativa a Runa Nórdica de Repulsão abaixo do bruxo.",
   },
   healingRune: {
     name: "Símbolo da Vida",
     icon: "✚",
-    description:
-      "A cada 15 segundos ativa a Runa Nórdica de Vida para restaurar a saúde.",
+    description: "A cada 15s ativa a Runa Nórdica de Vida para restaurar a saúde.",
   },
   stormSymbol: {
     name: "Símbolo da Tempestade",
     icon: "☔",
-    description:
-      "Invoca uma chuva. Inimigos molhados sofrem correntes elétricas.",
+    description: "Invoca uma chuva. Inimigos molhados sofrem correntes elétricas.",
   },
 };
-
-/* =========================================================
-   FUSÕES (COMBINAÇÕES DESBLOQUEÁVEIS NO LV 5)
-========================================================= */
-
-const COMBINATIONS = [
-  {
-    id: "inferno",
-    name: "Inferno Arcano",
-    a: "Chama",
-    b: "Orbes de Fogo",
-    keyA: "fire",
-    keyB: "orbitFire",
-    requirement: "Chama Nv. 5 + Orbes Nv. 5",
-    icon: "🔥",
-    description:
-      "Fusão Suprema: Orbes flamejam com erupções devastadoras de magma.",
-  },
-  {
-    id: "tempestade",
-    name: "Tempestade Glacial",
-    a: "Gelo",
-    b: "Raio",
-    keyA: "ice",
-    keyB: "lightning",
-    requirement: "Gelo Nv. 5 + Raio Nv. 5",
-    icon: "⚡",
-    description:
-      "Fusão Suprema: Nevasca contínua que dispara raios congelantes em cadeia.",
-  },
-  {
-    id: "abismo",
-    name: "Abismo",
-    a: "Vórtice Sombrio",
-    b: "Familiar",
-    keyA: "shadow",
-    keyB: "familiar",
-    requirement: "Vórtice Nv. 5 + Familiar Nv. 5",
-    icon: "🌑",
-    description:
-      "Fusão Suprema: Familiares emanam auras de vórtice sombrio próprio.",
-  },
-];
 
 /* =========================================================
    UTILITÁRIOS
@@ -237,25 +454,24 @@ const ENEMY_TYPES = [
   },
 ];
 
-/* =========================================================
-   CRIAÇÃO DE INIMIGO
-========================================================= */
-
-function createEnemy(x, y, typeIndex) {
+function createEnemy(x, y, typeIndex, time = 0) {
   const index =
     typeof typeIndex === "number"
       ? clamp(typeIndex, 0, ENEMY_TYPES.length - 1)
       : Math.floor(Math.random() * ENEMY_TYPES.length);
 
   const type = ENEMY_TYPES[index];
+  const hpMultiplier = 1 + Math.min(time / 180, 2.5);
+  const scaledHp = Math.floor(type.hp * hpMultiplier);
 
   return {
     id: `${Date.now()}-${Math.random()}`,
     x,
     y,
     ...type,
-    maxHp: type.hp,
-    hp: type.hp,
+    speed: type.speed * (1 + Math.min(time / 300, 0.35)),
+    maxHp: scaledHp,
+    hp: scaledHp,
     frozen: 0,
     wet: 0,
     rootedTimer: 0,
@@ -266,12 +482,8 @@ function createEnemy(x, y, typeIndex) {
   };
 }
 
-/* =========================================================
-   CRIAÇÃO DO BOSS (REBALANCEADO: TAMANHO E HP REDUZIDOS)
-========================================================= */
-
 function createBoss(player, wave) {
-  const bossHp = 650 + (wave || 1) * 120; // Vida rebalanceada
+  const bossHp = 650 + (wave || 1) * 120;
 
   return {
     id: `boss-${Date.now()}-${Math.random()}`,
@@ -282,7 +494,7 @@ function createBoss(player, wave) {
     hp: bossHp,
     maxHp: bossHp,
     speed: 16,
-    size: 38, // Tamanho rebalanceado
+    size: 38,
     soul: "boss",
     soulXP: 250,
     frozen: 0,
@@ -297,10 +509,6 @@ function createBoss(player, wave) {
   };
 }
 
-/* =========================================================
-   CRIAÇÃO DE ALMAS
-========================================================= */
-
 function createSoul(enemy) {
   return {
     id: `soul-${Date.now()}-${Math.random()}`,
@@ -312,10 +520,6 @@ function createSoul(enemy) {
     collected: false,
   };
 }
-
-/* =========================================================
-   CRIAÇÃO DE BAÚ
-========================================================= */
 
 const CHEST_TYPES = [
   { id: "xp", name: "Experiência Dobrada", icon: "✦" },
@@ -339,19 +543,43 @@ function createChest(player) {
 }
 
 /* =========================================================
-   COMPONENTE PRINCIPAL
+   COMPONENTE PRINCIPAL APP
 ========================================================= */
 
 function App() {
   const canvasRef = useRef(null);
 
-  /* =======================================================
-     ESTADO DO JOGO
-  ======================================================= */
+  /* ESTADOS DO MENU E TELAS */
+  const [screen, setScreen] = useState("menu");
+  const [selectedCharacter, setSelectedCharacter] = useState("ignis");
+  const [selectedMap, setSelectedMap] = useState("forest");
+  const [isPausedUI, setIsPausedUI] = useState(false);
+  const [saveDataAvailable, setSaveDataAvailable] = useState(false);
 
+  /* BANCO DE MOEDAS E UPGRADES PERMANENTES SALVOS */
+  const [soulsBank, setSoulsBank] = useState(() => {
+    const saved = localStorage.getItem("roguelike_bank");
+    return saved ? parseInt(saved, 10) : 0;
+  });
+
+  const [permanentStats, setPermanentStats] = useState(() => {
+    const saved = localStorage.getItem("roguelike_upgrades");
+    return saved ? JSON.parse(saved) : { maxHp: 0, speed: 0, damage: 0, magnet: 0 };
+  });
+
+  /* ESTADOS REACT DA PARTIDA */
+  const [, setTick] = useState(0);
+  const [levelUpOptions, setLevelUpOptions] = useState([]);
+  const [artifactChoices, setArtifactChoices] = useState([]);
+  const [gameOver, setGameOver] = useState(false);
+
+  /* ESTADO DO JOGO NO REF */
   const gameRef = useRef({
-    running: true,
+    running: false,
     paused: false,
+    playerIsInvincible: false,
+    selectedCharacter: "ignis",
+    selectedMap: "forest",
 
     player: {
       x: PLAYER_START_X,
@@ -381,24 +609,34 @@ function App() {
     artifacts: [],
     lavaPools: [],
     meteors: [],
+    mistClouds: [],
 
+    /* ENTIDADES DAS FUSÕES */
+    steamClouds: [],
+    electricPlants: [],
+    swampPools: [],
+
+    /* AS 10 MAGIAS: A PRINCIPAL COMEÇA NO LV.2 E AS DEMAIS NO LV.1 */
     spells: {
       fire: 1,
-      ice: 0,
-      lightning: 0,
-      shadow: 0,
-      orbitFire: 0,
-      familiar: 0,
-      lava: 0,
-      meteor: 0,
-      vines: 0,
-      humidity: 0,
+      ice: 1,
+      lightning: 1,
+      shadow: 1,
+      orbitFire: 1,
+      familiar: 1,
+      lava: 1,
+      meteor: 1,
+      vines: 1,
+      humidity: 1,
     },
 
+    /* AS 5 FUSÕES SUPREMAS (SEM NÍVEL: ATIVAS OU NÃO) */
     fusions: {
-      inferno: false,
-      tempestade: false,
-      abismo: false,
+      vaporInfernal: false,
+      florestaEletrica: false,
+      pantanoSombrio: false,
+      cataclismo: false,
+      abismoVivo: false,
     },
 
     keys: {},
@@ -422,7 +660,9 @@ function App() {
 
     artifactTimers: {
       repulsion: 15,
+      repulsionActive: 0,
       healing: 15,
+      healingActive: 0,
       storm: 10,
     },
 
@@ -434,42 +674,69 @@ function App() {
     kills: 0,
   });
 
-  /* =======================================================
-     ESTADOS REACT
-  ======================================================= */
-
-  const [, setTick] = useState(0);
-  const [levelUpOptions, setLevelUpOptions] = useState([]);
-  const [artifactChoices, setArtifactChoices] = useState([]);
-  const [gameOver, setGameOver] = useState(false);
-
-  /* =======================================================
-     FORÇA RENDERIZAÇÃO DA INTERFACE
-  ======================================================= */
-
   function refreshUI() {
-    setTick((value) => value + 1);
+    setTick((v) => v + 1);
   }
 
+  /* VERIFICAÇÃO INICIAL DE SAVE */
+  useEffect(() => {
+    const saved = localStorage.getItem("roguelike_save");
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved);
+        if (parsed && parsed.player) {
+          setSaveDataAvailable(true);
+        }
+      } catch (e) {
+        localStorage.removeItem("roguelike_save");
+      }
+    }
+  }, []);
+
   /* =======================================================
-     RESET DO JOGO
+     INICIAR NOVA PARTIDA
   ======================================================= */
 
-  function resetGame() {
+  function startNewGame(charId = selectedCharacter, mapId = selectedMap) {
+    const char = CHARACTERS.find((c) => c.id === charId) || CHARACTERS[0];
+    
+    const initialSpells = {
+      fire: 1,
+      ice: 1,
+      lightning: 1,
+      shadow: 1,
+      orbitFire: 1,
+      familiar: 1,
+      lava: 1,
+      meteor: 1,
+      vines: 1,
+      humidity: 1,
+    };
+    if (char && initialSpells[char.spellKey] !== undefined) {
+      initialSpells[char.spellKey] = 2;
+    }
+
+    const bonusHp = (permanentStats.maxHp || 0) * 20;
+    const bonusSpeed = 1 + (permanentStats.speed || 0) * 0.08;
+    const bonusDmg = 1 + (permanentStats.damage || 0) * 0.1;
+
     gameRef.current = {
       ...gameRef.current,
       running: true,
       paused: false,
+      playerIsInvincible: false,
+      selectedCharacter: char.id,
+      selectedMap: mapId,
       player: {
         x: PLAYER_START_X,
         y: PLAYER_START_Y,
-        hp: 100,
-        maxHp: 100,
-        speed: 260,
+        hp: 100 + bonusHp,
+        maxHp: 100 + bonusHp,
+        speed: 260 * bonusSpeed,
         level: 1,
         xp: 0,
         xpNeeded: INITIAL_XP_NEEDED,
-        damageMultiplier: 1,
+        damageMultiplier: bonusDmg,
         coins: 0,
       },
       camera: {
@@ -486,22 +753,17 @@ function App() {
       artifacts: [],
       lavaPools: [],
       meteors: [],
-      spells: {
-        fire: 1,
-        ice: 0,
-        lightning: 0,
-        shadow: 0,
-        orbitFire: 0,
-        familiar: 0,
-        lava: 0,
-        meteor: 0,
-        vines: 0,
-        humidity: 0,
-      },
+      mistClouds: [],
+      steamClouds: [],
+      electricPlants: [],
+      swampPools: [],
+      spells: initialSpells,
       fusions: {
-        inferno: false,
-        tempestade: false,
-        abismo: false,
+        vaporInfernal: false,
+        florestaEletrica: false,
+        pantanoSombrio: false,
+        cataclismo: false,
+        abismoVivo: false,
       },
       keys: {},
       time: 0,
@@ -521,7 +783,9 @@ function App() {
       damageMultiplierTimer: 0,
       artifactTimers: {
         repulsion: 15,
+        repulsionActive: 0,
         healing: 15,
+        healingActive: 0,
         storm: 10,
       },
       stormActive: false,
@@ -532,9 +796,115 @@ function App() {
       kills: 0,
     };
 
+    updateSpecialSpell("orbitFire");
+    updateSpecialSpell("familiar");
+
     setLevelUpOptions([]);
     setArtifactChoices([]);
     setGameOver(false);
+    setIsPausedUI(false);
+    setScreen("game");
+    refreshUI();
+  }
+
+  /* =======================================================
+     SALVAR E CONTINUAR (LOCALSTORAGE)
+  ======================================================= */
+
+  function saveGameToStorage() {
+    const game = gameRef.current;
+    if (!game.running) return;
+
+    const saveData = {
+      selectedCharacter: game.selectedCharacter,
+      selectedMap: game.selectedMap,
+      player: { ...game.player },
+      camera: { ...game.camera },
+      spells: { ...game.spells },
+      fusions: { ...game.fusions },
+      artifacts: [...game.artifacts],
+      time: game.time,
+      wave: game.wave,
+      kills: game.kills,
+      enemies: game.enemies.map((e) => ({ ...e })),
+      souls: game.souls.map((s) => ({ ...s })),
+      chests: game.chests.map((c) => ({ ...c })),
+      lavaPools: game.lavaPools.map((l) => ({ ...l })),
+      mistClouds: game.mistClouds.map((m) => ({ ...m })),
+      steamClouds: game.steamClouds.map((s) => ({ ...s })),
+      electricPlants: game.electricPlants.map((p) => ({ ...p })),
+      swampPools: game.swampPools.map((sw) => ({ ...sw })),
+      savedAt: Date.now(),
+    };
+
+    localStorage.setItem("roguelike_save", JSON.stringify(saveData));
+    setSaveDataAvailable(true);
+    
+    const newBank = soulsBank + Math.floor(game.kills / 2);
+    setSoulsBank(newBank);
+    localStorage.setItem("roguelike_bank", newBank.toString());
+
+    game.paused = true;
+    setIsPausedUI(false);
+    setScreen("menu");
+  }
+
+  function loadGameFromStorage() {
+    const saved = localStorage.getItem("roguelike_save");
+    if (!saved) return;
+
+    try {
+      const data = JSON.parse(saved);
+      const game = gameRef.current;
+
+      game.running = true;
+      game.paused = false;
+      game.playerIsInvincible = false;
+      game.selectedCharacter = data.selectedCharacter || "ignis";
+      game.selectedMap = data.selectedMap || "forest";
+      game.player = { ...data.player };
+      game.camera = { ...data.camera };
+      game.spells = { ...data.spells };
+      game.fusions = { ...data.fusions };
+      game.artifacts = [...(data.artifacts || [])];
+      game.time = data.time || 0;
+      game.wave = data.wave || 1;
+      game.kills = data.kills || 0;
+      game.enemies = (data.enemies || []).map((e) => ({ ...e }));
+      game.souls = (data.souls || []).map((s) => ({ ...s }));
+      game.chests = (data.chests || []).map((c) => ({ ...c }));
+      game.lavaPools = (data.lavaPools || []).map((l) => ({ ...l }));
+      game.mistClouds = (data.mistClouds || []).map((m) => ({ ...m }));
+      game.steamClouds = (data.steamClouds || []).map((s) => ({ ...s }));
+      game.electricPlants = (data.electricPlants || []).map((p) => ({ ...p }));
+      game.swampPools = (data.swampPools || []).map((sw) => ({ ...sw }));
+      game.projectiles = [];
+      game.effects = [];
+      game.keys = {};
+
+      updateSpecialSpell("orbitFire");
+      updateSpecialSpell("familiar");
+
+      setLevelUpOptions([]);
+      setArtifactChoices([]);
+      setGameOver(false);
+      setIsPausedUI(false);
+      setScreen("game");
+      refreshUI();
+    } catch (e) {
+      localStorage.removeItem("roguelike_save");
+      setSaveDataAvailable(false);
+    }
+  }
+
+  function togglePause() {
+    if (screen !== "game") return;
+    const game = gameRef.current;
+    if (levelUpOptions.length > 0 || artifactChoices.length > 0 || gameOver) return;
+
+    const nextPaused = !game.paused;
+    game.paused = nextPaused;
+    setIsPausedUI(nextPaused);
     refreshUI();
   }
 
@@ -549,9 +919,7 @@ function App() {
 
     for (const enemy of game.enemies) {
       if (enemy.dead || ignoreIds.includes(enemy.id)) continue;
-
       const currentDistance = Math.hypot(enemy.x - x, enemy.y - y);
-
       if (currentDistance < closestDistance) {
         closest = enemy;
         closestDistance = currentDistance;
@@ -576,7 +944,6 @@ function App() {
       game.player.xp -= game.player.xpNeeded;
       game.player.level += 1;
       game.player.xpNeeded = Math.floor(game.player.xpNeeded * 1.25);
-
       triggerLevelUp();
       break;
     }
@@ -585,59 +952,63 @@ function App() {
   }
 
   /* =======================================================
-     LEVEL UP & FILTRAGEM ESTREITA LV. 5 E FUSÕES
+     VERIFICAÇÃO DE FUSÕES AUTOMÁTICAS
+  ======================================================= */
+
+  function checkFusions() {
+    const game = gameRef.current;
+    for (const combo of COMBINATIONS) {
+      const isAMax = (game.spells[combo.keyA] || 0) >= 5;
+      const isBMax = (game.spells[combo.keyB] || 0) >= 5;
+      if (isAMax && isBMax && !game.fusions[combo.id]) {
+        game.fusions[combo.id] = true;
+        game.effects.push({
+          type: "fusionUnlocked",
+          x: game.player.x,
+          y: game.player.y,
+          name: combo.name,
+          timer: 3.0,
+        });
+      }
+    }
+  }
+
+  /* =======================================================
+     LEVEL UP - FILTRAGEM: SEM LV.5, SEM LV.0, SEM NÍVEL P/ FUSÃO
   ======================================================= */
 
   function triggerLevelUp() {
     const game = gameRef.current;
     game.paused = true;
 
-    /*
-      Filtragem estrita:
-      Magias com nível igual ou superior a 5 NÃO aparecem mais como opção.
-    */
-    const availableSpells = Object.keys(SPELLS).filter(
+    const availableNormalSpells = Object.keys(SPELLS).filter(
       (key) => game.spells[key] < SPELLS[key].max
     );
 
-    /*
-      Verifica se alguma Fusão atende aos requisitos de dual Lv. 5
-      e ainda não foi obtida.
-    */
-    const availableFusions = COMBINATIONS.filter((combo) => {
-      const hasA = game.spells[combo.keyA] >= 5;
-      const hasB = game.spells[combo.keyB] >= 5;
-      const alreadyFused = game.fusions[combo.id];
-      return hasA && hasB && !alreadyFused;
-    }).map((combo) => `fusion_${combo.id}`);
+    if (availableNormalSpells.length === 0) {
+      game.player.hp = Math.min(game.player.maxHp, game.player.hp + 40);
+      game.paused = false;
+      return;
+    }
 
-    const pool = [...availableSpells, ...availableFusions].sort(
-      () => Math.random() - 0.5
-    );
-
+    const pool = [...availableNormalSpells].sort(() => Math.random() - 0.5);
     const options = pool.slice(0, 3);
-
     setLevelUpOptions(options);
     refreshUI();
   }
 
   /* =======================================================
-     ESCOLHER MAGIA / FUSÃO
+     ESCOLHER MAGIA NORMAL
   ======================================================= */
 
-  function chooseSpell(choiceKey) {
+  function chooseSpell(spellKey) {
     const game = gameRef.current;
 
-    /* Se for uma Fusão */
-    if (choiceKey.startsWith("fusion_")) {
-      const fusionId = choiceKey.replace("fusion_", "");
-      game.fusions[fusionId] = true;
-      applyFusionEffect(fusionId);
-    } else if (SPELLS[choiceKey]) {
-      /* Se for uma Magia normal */
-      if (game.spells[choiceKey] < SPELLS[choiceKey].max) {
-        game.spells[choiceKey] += 1;
-        updateSpecialSpell(choiceKey);
+    if (SPELLS[spellKey]) {
+      if (game.spells[spellKey] < SPELLS[spellKey].max) {
+        game.spells[spellKey] += 1;
+        updateSpecialSpell(spellKey);
+        checkFusions();
       }
     }
 
@@ -647,35 +1018,17 @@ function App() {
   }
 
   /* =======================================================
-     APLICA EFEITOS DE FUSÃO
-  ======================================================= */
-
-  function applyFusionEffect(fusionId) {
-    const game = gameRef.current;
-    game.effects.push({
-      type: "fusionUnlock",
-      x: game.player.x,
-      y: game.player.y,
-      fusionId,
-      timer: 3,
-    });
-  }
-
-  /* =======================================================
-     ATUALIZA MAGIAS ESPECIAIS (FORMALIZAÇÃO EM PENTÁGONO)
+     ATUALIZA MAGIAS ESPECIAIS (FORMAÇÃO PENTAGONAL)
   ======================================================= */
 
   function updateSpecialSpell(spellKey) {
     const game = gameRef.current;
 
-    /* ORBES DE FOGO (Pentágono simétrico 360°/5) */
     if (spellKey === "orbitFire") {
       const amount = game.spells.orbitFire;
       while (game.orbitBalls.length < amount) {
-        const index = game.orbitBalls.length;
-        const baseAngle = (index * Math.PI * 2) / 5;
         game.orbitBalls.push({
-          angle: baseAngle,
+          angle: 0,
           timer: Math.random() * 5,
           state: "orbit",
           x: game.player.x,
@@ -684,14 +1037,11 @@ function App() {
       }
     }
 
-    /* FAMILIARES (Pentágono simétrico 360°/5) */
     if (spellKey === "familiar") {
       const amount = game.spells.familiar;
       while (game.familiars.length < amount) {
-        const index = game.familiars.length;
-        const baseAngle = (index * Math.PI * 2) / 5;
         game.familiars.push({
-          angle: baseAngle,
+          angle: 0,
           timer: Math.random() * 1.2,
           x: game.player.x,
           y: game.player.y,
@@ -701,16 +1051,34 @@ function App() {
   }
 
   /* =======================================================
-     MORTE DO INIMIGO
+     MORTE DO INIMIGO & REAÇÃO DAS PLANTAS ELÉTRICAS
   ======================================================= */
 
-  function killEnemy(enemy) {
+  function killEnemy(enemy, killedByLightning = false) {
     const game = gameRef.current;
-
     if (!enemy || enemy.dead) return;
 
     enemy.dead = true;
     game.kills += 1;
+
+    // FUSÃO: Geração de Floresta (Raio + Vinhas)
+    if (killedByLightning && game.fusions.florestaEletrica) {
+      if (game.electricPlants.length < 5) {
+        game.electricPlants.push({
+          id: `plant-${Date.now()}-${Math.random()}`,
+          x: enemy.x,
+          y: enemy.y,
+          duration: 5.0,
+          shootTimer: 0.6,
+        });
+        game.effects.push({
+          type: "plantSpawn",
+          x: enemy.x,
+          y: enemy.y,
+          timer: 0.8,
+        });
+      }
+    }
 
     if (!enemy.isBoss) {
       game.souls.push(createSoul(enemy));
@@ -737,10 +1105,6 @@ function App() {
     }
   }
 
-  /* =======================================================
-     LEVEL UP DO BOSS
-  ======================================================= */
-
   function forceBossLevelUp() {
     const game = gameRef.current;
     game.player.level += 1;
@@ -754,7 +1118,7 @@ function App() {
      DANO NO INIMIGO
   ======================================================= */
 
-  function damageEnemy(enemy, amount) {
+  function damageEnemy(enemy, amount, isLightning = false) {
     const game = gameRef.current;
     if (!enemy || enemy.dead) return;
 
@@ -762,7 +1126,7 @@ function App() {
 
     if (enemy.hp <= 0) {
       enemy.hp = 0;
-      killEnemy(enemy);
+      killEnemy(enemy, isLightning);
     }
   }
 
@@ -773,7 +1137,6 @@ function App() {
   function fireBasicShot() {
     const game = gameRef.current;
     const enemy = getClosestEnemy(game.player.x, game.player.y);
-
     if (!enemy) return;
 
     const angle = Math.atan2(enemy.y - game.player.y, enemy.x - game.player.x);
@@ -794,13 +1157,13 @@ function App() {
   }
 
   /* =======================================================
-     MAGIA DE FOGO & REAÇÃO ELEMENTAL DE VAPOR (UMIDADE + CHAMA)
+     MAGIAS DE COMBATE & FUSÕES
   ======================================================= */
 
+  // 1. CHAMA
   function castFire() {
     const game = gameRef.current;
     const amount = game.spells.fire;
-
     if (amount <= 0) return;
 
     for (let i = 0; i < amount; i++) {
@@ -815,9 +1178,9 @@ function App() {
         type: "fire",
         x: game.player.x,
         y: game.player.y,
-        vx: Math.cos(angle) * 420,
-        vy: Math.sin(angle) * 420,
-        damage: 30,
+        vx: Math.cos(angle) * 440,
+        vy: Math.sin(angle) * 440,
+        damage: 32 + amount * 6,
         radius: 10,
         life: 2,
         color: "#ff6b21",
@@ -825,16 +1188,24 @@ function App() {
         pierced: 0,
       });
     }
+
+    // Fusão: Vapor Infernal (Chama + Gelo)
+    if (game.fusions.vaporInfernal) {
+      game.steamClouds.push({
+        id: `steam-${Date.now()}-${Math.random()}`,
+        x: game.player.x + randomBetween(-60, 60),
+        y: game.player.y + randomBetween(-60, 60),
+        radius: 75,
+        duration: 4.5,
+        damagePerSec: 60,
+      });
+    }
   }
 
-  /* =======================================================
-     MAGIA DE GELO & REAÇÃO ELEMENTAL (UMIDADE + GELO = 3X FREEEZE)
-  ======================================================= */
-
+  // 2. GELO
   function castIce() {
     const game = gameRef.current;
     const amount = game.spells.ice;
-
     if (amount <= 0) return;
 
     const targets = [...game.enemies]
@@ -843,11 +1214,9 @@ function App() {
       .slice(0, Math.min(amount, 5));
 
     for (const enemy of targets) {
-      /* Reação com Umidade: se estiver molhado, congelamento é multiplicado por 3 */
       const freezeMult = enemy.wet > 0 ? 3 : 1;
       enemy.frozen = 2.5 * freezeMult;
-
-      damageEnemy(enemy, 18);
+      damageEnemy(enemy, 20 + amount * 4);
 
       game.effects.push({
         type: "ice",
@@ -855,17 +1224,25 @@ function App() {
         y: enemy.y,
         timer: 0.5,
       });
+
+      // Fusão: Vapor Infernal (Chama + Gelo)
+      if (game.fusions.vaporInfernal) {
+        game.steamClouds.push({
+          id: `steam-${Date.now()}-${Math.random()}`,
+          x: enemy.x,
+          y: enemy.y,
+          radius: 70,
+          duration: 4.0,
+          damagePerSec: 65,
+        });
+      }
     }
   }
 
-  /* =======================================================
-     MAGIA DE RAIO & REAÇÃO ELEMENTAL (UMIDADE + RAIO = CADEIA 3X)
-  ======================================================= */
-
+  // 3. RAIO
   function castLightning() {
     const game = gameRef.current;
     const amount = game.spells.lightning;
-
     if (amount <= 0) return;
 
     const targets = [...game.enemies]
@@ -881,19 +1258,15 @@ function App() {
         timer: 0.4,
       });
 
-      killEnemy(enemy);
+      damageEnemy(enemy, 9999, true);
 
-      /* Reação com Umidade: atinge até 3 inimigos próximos molhados */
       if (enemy.wet > 0 || game.stormActive) {
         lightningChain(enemy);
       }
     }
   }
 
-  /* =======================================================
-     NOVA MAGIA 1 — POÇAS DE LAVA
-  ======================================================= */
-
+  // 4. POÇAS DE LAVA
   function castLava() {
     const game = gameRef.current;
     const amount = game.spells.lava;
@@ -907,9 +1280,10 @@ function App() {
         id: `lava-${Date.now()}-${Math.random()}`,
         x: game.player.x + Math.cos(angle) * dist,
         y: game.player.y + Math.sin(angle) * dist,
-        radius: 45 + amount * 3,
+        radius: 45 + amount * 4,
         duration: 6,
-        damagePerSec: 35 + amount * 5,
+        damagePerSec: 35 + amount * 6,
+        isCataclysm: false,
       });
     }
   }
@@ -931,10 +1305,7 @@ function App() {
     game.lavaPools = game.lavaPools.filter((pool) => pool.duration > 0);
   }
 
-  /* =======================================================
-     NOVA MAGIA 2 — METEORO
-  ======================================================= */
-
+  // 5. METEORO & FUSÃO CATACLISMO
   function castMeteor() {
     const game = gameRef.current;
     const amount = game.spells.meteor;
@@ -957,9 +1328,9 @@ function App() {
         startY: targetY - 400,
         currentX: targetX + 180,
         currentY: targetY - 400,
-        timer: 0.7, // tempo de aviso e queda
+        timer: 0.7,
         radius: 65 + amount * 8,
-        damage: 130 + amount * 25,
+        damage: 130 + amount * 30,
         exploded: false,
       });
     }
@@ -979,19 +1350,51 @@ function App() {
       if (m.timer <= 0) {
         m.exploded = true;
 
-        /* Explosão em área */
+        const isCataclysm = game.fusions.cataclismo;
+        const blastRadius = isCataclysm ? m.radius * 1.5 : m.radius;
+        const blastDamage = isCataclysm ? m.damage * 1.6 : m.damage;
+
         game.effects.push({
           type: "meteorExplosion",
           x: m.x,
           y: m.y,
-          radius: m.radius,
+          radius: blastRadius,
           timer: 0.6,
         });
 
         for (const enemy of game.enemies) {
           if (enemy.dead) continue;
-          if (distance(m, enemy) <= m.radius) {
-            damageEnemy(enemy, m.damage);
+          if (distance(m, enemy) <= blastRadius) {
+            damageEnemy(enemy, blastDamage);
+          }
+        }
+
+        if (isCataclysm) {
+          game.lavaPools.push({
+            id: `cataclysm-lava-${Date.now()}-${Math.random()}`,
+            x: m.x,
+            y: m.y,
+            radius: 110,
+            duration: 10,
+            damagePerSec: 85,
+            isCataclysm: true,
+          });
+
+          for (let k = 0; k < 8; k++) {
+            const angle = (k * Math.PI * 2) / 8;
+            game.projectiles.push({
+              type: "fire",
+              x: m.x,
+              y: m.y,
+              vx: Math.cos(angle) * 380,
+              vy: Math.sin(angle) * 380,
+              damage: 75,
+              radius: 9,
+              life: 1.5,
+              color: "#ff3300",
+              ricochets: 0,
+              pierced: 1,
+            });
           }
         }
       }
@@ -1000,29 +1403,22 @@ function App() {
     game.meteors = game.meteors.filter((m) => !m.exploded);
   }
 
-  /* =======================================================
-     NOVA MAGIA 3 — VINHAS SOMBRIAS (3 A 15 INIMIGOS)
-  ======================================================= */
-
+  // 6. VINHAS SOMBRIAS & FUSÃO PÂNTANO SOMBRIO
   function castVines() {
     const game = gameRef.current;
     const level = game.spells.vines;
     if (level <= 0) return;
 
-    /* Progressão obrigatória: 3, 6, 9, 12, 15 */
     const count = level * 3;
-
     const targets = [...game.enemies]
       .filter((enemy) => !enemy.dead && enemy.rootedTimer <= 0)
       .sort((a, b) => distance(game.player, a) - distance(game.player, b))
       .slice(0, count);
 
     for (const enemy of targets) {
-      /* Reação com Umidade: duração da prisão é multiplicada por 3 */
       const vineMult = enemy.wet > 0 ? 3 : 1;
       enemy.rootedTimer = 3.5 * vineMult;
-
-      damageEnemy(enemy, 25);
+      damageEnemy(enemy, 25 + level * 5);
 
       game.effects.push({
         type: "vinesGrasp",
@@ -1030,44 +1426,150 @@ function App() {
         y: enemy.y,
         timer: enemy.rootedTimer,
       });
+
+      if (game.fusions.pantanoSombrio) {
+        game.swampPools.push({
+          id: `swamp-${Date.now()}-${Math.random()}`,
+          x: enemy.x,
+          y: enemy.y,
+          radius: 80,
+          duration: 7,
+          damagePerSec: 45,
+        });
+      }
     }
   }
 
-  /* =======================================================
-     NOVA MAGIA 4 — UMIDADE ARCANA
-  ======================================================= */
-
+  // 7. UMIDADE ARCANA & FUSÃO PÂNTANO
   function castHumidity() {
     const game = gameRef.current;
     const level = game.spells.humidity;
     if (level <= 0) return;
 
-    const radius = 110 + level * 25;
+    const radius = 120 + level * 25;
+    const angle = Math.random() * Math.PI * 2;
+    const dist = randomBetween(100, 380);
 
-    game.effects.push({
-      type: "humidityCloud",
-      x: game.player.x,
-      y: game.player.y,
+    const cloudX = game.player.x + Math.cos(angle) * dist;
+    const cloudY = game.player.y + Math.sin(angle) * dist;
+
+    game.mistClouds.push({
+      id: `mist-${Date.now()}-${Math.random()}`,
+      x: cloudX,
+      y: cloudY,
       radius,
-      timer: 5,
+      duration: 8,
     });
 
-    for (const enemy of game.enemies) {
-      if (enemy.dead) continue;
-      if (distance(game.player, enemy) <= radius) {
-        enemy.wet = 8;
-      }
+    if (game.fusions.pantanoSombrio) {
+      game.swampPools.push({
+        id: `swamp-${Date.now()}-${Math.random()}`,
+        x: cloudX,
+        y: cloudY,
+        radius: radius * 0.9,
+        duration: 9,
+        damagePerSec: 50,
+      });
     }
   }
 
-  /* =======================================================
-     VÓRTICE SOMBRIO
-  ======================================================= */
+  function updateMistClouds(dt) {
+    const game = gameRef.current;
+    let playerInsideMist = false;
 
+    for (const cloud of game.mistClouds) {
+      cloud.duration -= dt;
+      if (distance(game.player, cloud) <= cloud.radius) {
+        playerInsideMist = true;
+      }
+      for (const enemy of game.enemies) {
+        if (enemy.dead) continue;
+        if (distance(cloud, enemy) <= cloud.radius) {
+          enemy.wet = 8;
+        }
+      }
+    }
+
+    game.playerIsInvincible = playerInsideMist;
+    game.mistClouds = game.mistClouds.filter((cloud) => cloud.duration > 0);
+  }
+
+  // ATUALIZAÇÃO DAS FUSÕES ATIVAS
+  function updateSteamClouds(dt) {
+    const game = gameRef.current;
+    for (const cloud of game.steamClouds) {
+      cloud.duration -= dt;
+      for (const enemy of game.enemies) {
+        if (enemy.dead) continue;
+        if (distance(cloud, enemy) <= cloud.radius) {
+          enemy.shadowSlow = Math.max(enemy.shadowSlow || 0, 0.45);
+          enemy.wet = Math.max(enemy.wet || 0, 4);
+          damageEnemy(enemy, cloud.damagePerSec * dt);
+        }
+      }
+    }
+    game.steamClouds = game.steamClouds.filter((c) => c.duration > 0);
+  }
+
+  function updateElectricPlants(dt) {
+    const game = gameRef.current;
+    for (const plant of game.electricPlants) {
+      plant.duration -= dt;
+      plant.shootTimer -= dt;
+
+      if (plant.shootTimer <= 0) {
+        const target = getClosestEnemy(plant.x, plant.y);
+        if (target && distance(plant, target) < 420) {
+          const angle = Math.atan2(target.y - plant.y, target.x - plant.x);
+          game.projectiles.push({
+            type: "electricBall",
+            x: plant.x,
+            y: plant.y,
+            vx: Math.cos(angle) * 500,
+            vy: Math.sin(angle) * 500,
+            damage: 65,
+            radius: 8,
+            life: 1.8,
+            color: "#a0ff40",
+            ricochets: 0,
+            pierced: 0,
+            isPlantShot: true,
+          });
+          game.effects.push({
+            type: "chainLightning",
+            x: plant.x,
+            y: plant.y,
+            fromX: target.x,
+            fromY: target.y,
+            timer: 0.15,
+          });
+        }
+        plant.shootTimer = 0.65;
+      }
+    }
+    game.electricPlants = game.electricPlants.filter((p) => p.duration > 0);
+  }
+
+  function updateSwampPools(dt) {
+    const game = gameRef.current;
+    for (const pool of game.swampPools) {
+      pool.duration -= dt;
+      for (const enemy of game.enemies) {
+        if (enemy.dead) continue;
+        if (distance(pool, enemy) <= pool.radius) {
+          enemy.shadowSlow = Math.max(enemy.shadowSlow || 0, 0.7);
+          enemy.wet = Math.max(enemy.wet || 0, 6);
+          damageEnemy(enemy, pool.damagePerSec * dt);
+        }
+      }
+    }
+    game.swampPools = game.swampPools.filter((p) => p.duration > 0);
+  }
+
+  // 8. VÓRTICE SOMBRIO
   function updateShadow(dt) {
     const game = gameRef.current;
     const level = game.spells.shadow;
-
     if (level <= 0) return;
 
     const radius = 75 + level * 15;
@@ -1075,7 +1577,6 @@ function App() {
 
     for (const enemy of game.enemies) {
       if (enemy.dead) continue;
-
       const d = distance(game.player, enemy);
       if (d < radius) {
         enemy.shadowSlow = slowAmount;
@@ -1095,85 +1596,80 @@ function App() {
     });
   }
 
-  /* =======================================================
-     ORBES DE FOGO (FORMAÇÃO DE PENTÁGONO)
-  ======================================================= */
-
+  // 9. ORBES DE FOGO (PENTÁGONO REAL)
   function updateOrbitBalls(dt) {
     const game = gameRef.current;
     const amount = game.spells.orbitFire;
-
     if (amount <= 0) return;
 
     const radius = 70 + amount * 7;
 
     game.orbitBalls.forEach((ball, index) => {
       ball.angle += dt * 1.5;
+      const vertexAngle = (index * Math.PI * 2) / 5;
+      const currentAngle = ball.angle + vertexAngle;
 
-      /* Formação Pentagonal (base 360° / 5) */
-      const baseOffset = (index * Math.PI * 2) / 5;
-
-      ball.x = game.player.x + Math.cos(ball.angle + baseOffset) * radius;
-      ball.y = game.player.y + Math.sin(ball.angle + baseOffset) * radius;
-
+      ball.x = game.player.x + Math.cos(currentAngle) * radius;
+      ball.y = game.player.y + Math.sin(currentAngle) * radius;
       ball.timer += dt;
 
       if (ball.timer >= 5 && ball.state === "orbit") {
         const enemy = getClosestEnemy(ball.x, ball.y);
         if (enemy) {
           const angle = Math.atan2(enemy.y - ball.y, enemy.x - ball.x);
-
-          /* Fusão Inferno Arcano: orbes maiores com explosões */
-          const isInferno = game.fusions.inferno;
-
           game.projectiles.push({
-            type: isInferno ? "orbitInferno" : "orbit",
+            type: "orbit",
             x: ball.x,
             y: ball.y,
-            vx: Math.cos(angle) * (isInferno ? 550 : 480),
-            vy: Math.sin(angle) * (isInferno ? 550 : 480),
-            damage: isInferno ? 110 : 50,
-            radius: isInferno ? 18 : 12,
+            vx: Math.cos(angle) * 480,
+            vy: Math.sin(angle) * 480,
+            damage: 50,
+            radius: 12,
             life: 2,
-            color: isInferno ? "#ff3300" : "#ff9d24",
+            color: "#ff9d24",
             ricochets: 0,
             pierced: 0,
           });
-
           ball.timer = 0;
         }
       }
     });
   }
 
-  /* =======================================================
-     FAMILIARES (FORMAÇÃO DE PENTÁGONO)
-  ======================================================= */
-
+  // 10. FAMILIARES & FUSÃO ABISMO VIVO
   function updateFamiliars(dt) {
     const game = gameRef.current;
     const amount = game.spells.familiar;
-
     if (amount <= 0) return;
+
+    const isAbismoVivo = game.fusions.abismoVivo;
 
     game.familiars.forEach((familiar, index) => {
       familiar.angle += dt;
       const radius = 95;
+      const vertexAngle = (index * Math.PI * 2) / 5;
+      const currentAngle = familiar.angle + vertexAngle;
 
-      /* Formação Pentagonal (base 360° / 5) */
-      const baseOffset = (index * Math.PI * 2) / 5;
+      familiar.x = game.player.x + Math.cos(currentAngle) * radius;
+      familiar.y = game.player.y + Math.sin(currentAngle) * radius;
 
-      familiar.x = game.player.x + Math.cos(familiar.angle + baseOffset) * radius;
-      familiar.y = game.player.y + Math.sin(familiar.angle + baseOffset) * radius;
-
-      /* Fusão Abismo: familiar emana aura de vórtice próprio */
-      if (game.fusions.abismo) {
+      if (isAbismoVivo) {
+        const vortexRadius = 80;
         for (const enemy of game.enemies) {
           if (enemy.dead) continue;
-          if (distance(familiar, enemy) <= 50) {
-            damageEnemy(enemy, 15 * dt);
+          if (distance(familiar, enemy) <= vortexRadius) {
+            enemy.shadowSlow = 0.65;
+            damageEnemy(enemy, 55 * dt);
           }
         }
+        game.effects.push({
+          type: "shadowAura",
+          x: familiar.x,
+          y: familiar.y,
+          radius: vortexRadius,
+          rotation: game.time * 3,
+          timer: 0.03,
+        });
       }
 
       familiar.timer -= dt;
@@ -1182,22 +1678,20 @@ function App() {
         const enemy = getClosestEnemy(familiar.x, familiar.y);
         if (enemy) {
           const angle = Math.atan2(enemy.y - familiar.y, enemy.x - familiar.x);
-
           game.projectiles.push({
             type: "familiar",
             x: familiar.x,
             y: familiar.y,
-            vx: Math.cos(angle) * 400,
-            vy: Math.sin(angle) * 400,
-            damage: 20,
-            radius: 7,
+            vx: Math.cos(angle) * 420,
+            vy: Math.sin(angle) * 420,
+            damage: isAbismoVivo ? 48 : 22,
+            radius: isAbismoVivo ? 10 : 7,
             life: 2,
-            color: "#b978ff",
+            color: isAbismoVivo ? "#7b1fa2" : "#b978ff",
             ricochets: 0,
-            pierced: 0,
+            pierced: isAbismoVivo ? 99 : 0,
           });
-
-          familiar.timer = 1.2;
+          familiar.timer = isAbismoVivo ? 0.8 : 1.2;
         }
       }
     });
@@ -1209,7 +1703,6 @@ function App() {
 
   function ricochetProjectile(projectile, enemy) {
     const game = gameRef.current;
-
     if (!game.artifacts.includes("ricochet")) return false;
 
     const ricochetCount = projectile.ricochets || 0;
@@ -1217,17 +1710,14 @@ function App() {
 
     const hitEnemies = projectile.hitEnemies || [];
     const nextEnemy = getClosestEnemy(enemy.x, enemy.y, hitEnemies);
-
     if (!nextEnemy || distance(enemy, nextEnemy) > 500) return false;
 
     const angle = Math.atan2(nextEnemy.y - enemy.y, nextEnemy.x - enemy.x);
-
     projectile.x = enemy.x;
     projectile.y = enemy.y;
     projectile.vx = Math.cos(angle) * 500;
     projectile.vy = Math.sin(angle) * 500;
     projectile.ricochets = ricochetCount + 1;
-
     return true;
   }
 
@@ -1244,8 +1734,7 @@ function App() {
       for (const enemy of game.enemies) {
         if (enemy.dead) continue;
 
-        const alreadyHit =
-          projectile.hitEnemies && projectile.hitEnemies.includes(enemy.id);
+        const alreadyHit = projectile.hitEnemies && projectile.hitEnemies.includes(enemy.id);
         if (alreadyHit) continue;
 
         const d = Math.hypot(projectile.x - enemy.x, projectile.y - enemy.y);
@@ -1256,7 +1745,6 @@ function App() {
           }
           projectile.hitEnemies.push(enemy.id);
 
-          /* Reação Elemental com Chama + Umidade = Dano de Vapor (+100%) */
           let finalDamage = projectile.damage;
           if (projectile.type === "fire" && enemy.wet > 0) {
             finalDamage *= 2;
@@ -1268,16 +1756,17 @@ function App() {
             });
           }
 
-          damageEnemy(enemy, finalDamage);
+          const isLightningKill = projectile.isPlantShot || projectile.type === "electricBall";
+          damageEnemy(enemy, finalDamage, isLightningKill);
 
-          if (
-            projectile.type === "fire" &&
-            game.artifacts.includes("piercingFlame")
-          ) {
+          if (projectile.type === "fire" && game.artifacts.includes("piercingFlame")) {
             projectile.pierced = (projectile.pierced || 0) + 1;
-            if (projectile.pierced >= 8) {
-              projectile.life = 0;
-            }
+            if (projectile.pierced >= 8) projectile.life = 0;
+            continue;
+          }
+
+          if (projectile.pierced > 0) {
+            projectile.pierced -= 1;
             continue;
           }
 
@@ -1305,13 +1794,11 @@ function App() {
     for (const enemy of game.enemies) {
       if (enemy.dead) continue;
 
-      /* Prisão de Vinhas */
       if (enemy.rootedTimer > 0) {
         enemy.rootedTimer -= dt;
-        continue; // Inimigo imóvel
+        continue;
       }
 
-      /* Congelamento */
       if (enemy.frozen > 0) {
         enemy.frozen -= dt;
         continue;
@@ -1330,7 +1817,9 @@ function App() {
 
       const d = distance(enemy, game.player);
       if (d < 28) {
-        game.player.hp -= 10 * dt;
+        if (!game.playerIsInvincible) {
+          game.player.hp -= 10 * dt;
+        }
       }
 
       if (enemy.wet > 0) {
@@ -1350,29 +1839,33 @@ function App() {
      SPAWN DE INIMIGOS
   ======================================================= */
 
-  function randomEnemyAround(player) {
+  function randomEnemyAround(player, time) {
     const angle = Math.random() * Math.PI * 2;
     const spawnDistance = 650 + Math.random() * 500;
 
     return createEnemy(
       player.x + Math.cos(angle) * spawnDistance,
-      player.y + Math.sin(angle) * spawnDistance
+      player.y + Math.sin(angle) * spawnDistance,
+      null,
+      time
     );
   }
 
   function spawnEnemies(dt) {
     const game = gameRef.current;
+    if (game.enemies.length >= MAX_ENEMIES_CAP) return;
 
     game.spawnTimer -= dt;
     if (game.spawnTimer > 0) return;
 
-    const amount = Math.min(1 + Math.floor(game.time / 30), 8);
-
+    const amount = Math.min(1 + Math.floor(game.time / 45), 7);
     for (let i = 0; i < amount; i++) {
-      game.enemies.push(randomEnemyAround(game.player));
+      if (game.enemies.length < MAX_ENEMIES_CAP) {
+        game.enemies.push(randomEnemyAround(game.player, game.time));
+      }
     }
 
-    game.spawnTimer = Math.max(0.4, 2.2 - game.time / 100);
+    game.spawnTimer = Math.max(0.6, 2.6 - game.time / 220);
   }
 
   /* =======================================================
@@ -1381,7 +1874,6 @@ function App() {
 
   function updateWaves() {
     const game = gameRef.current;
-
     const newWave = Math.floor(game.time / WAVE_DURATION) + 1;
     if (newWave === game.wave) return;
 
@@ -1392,7 +1884,6 @@ function App() {
         const boss = createBoss(game.player, game.wave);
         game.enemies.push(boss);
         game.bossSpawnedThisWave = true;
-
         game.effects.push({
           type: "bossWarning",
           x: game.player.x,
@@ -1411,7 +1902,6 @@ function App() {
 
   function spawnChest(dt) {
     const game = gameRef.current;
-
     game.chestTimer -= dt;
     if (game.chestTimer > 0) return;
 
@@ -1472,22 +1962,19 @@ function App() {
 
   function checkChests() {
     const game = gameRef.current;
-
     for (const chest of game.chests) {
       if (chest.opened) continue;
-
       if (distance(game.player, chest) < 40) {
         openChest(chest);
       }
     }
-
     game.chests = game.chests.filter(
       (chest) => distance(game.player, chest) < 1800
     );
   }
 
   /* =======================================================
-     BOMBA ATÔMICA (REFINAMENTO VISUAL IMPACTANTE: PREP, FLASH & SHOCKWAVE)
+     BOMBA ATÔMICA
   ======================================================= */
 
   function triggerNuclearBomb() {
@@ -1502,7 +1989,6 @@ function App() {
 
     game.bombsUsed += 1;
 
-    /* Estágio 1: Carga */
     game.effects.push({
       type: "nuclearPrep",
       x: game.player.x,
@@ -1510,7 +1996,6 @@ function App() {
       timer: 0.3,
     });
 
-    /* Estágio 2: Onda de choque expansiva */
     game.effects.push({
       type: "nuclearShockwave",
       x: game.player.x,
@@ -1520,7 +2005,6 @@ function App() {
       timer: 1.5,
     });
 
-    /* Estágio 3: Flash global iluminando a tela inteira */
     game.effects.push({
       type: "nuclearFlash",
       timer: 1.2,
@@ -1537,18 +2021,18 @@ function App() {
 
   function updateSouls(dt) {
     const game = gameRef.current;
+    const magnetRadius = 160 * (1 + (permanentStats.magnet || 0) * 0.25);
 
     for (const soul of game.souls) {
       soul.life -= dt;
-
       const d = distance(soul, game.player);
-      if (d < 160) {
+
+      if (d < magnetRadius) {
         const angle = Math.atan2(
           game.player.y - soul.y,
           game.player.x - soul.x
         );
-        const attractionSpeed = 120 + (160 - d) * 3;
-
+        const attractionSpeed = 120 + (magnetRadius - d) * 3;
         soul.x += Math.cos(angle) * attractionSpeed * dt;
         soul.y += Math.sin(angle) * attractionSpeed * dt;
       }
@@ -1570,7 +2054,6 @@ function App() {
 
   function generateArtifactChoices() {
     const game = gameRef.current;
-
     const available = Object.keys(ARTIFACTS).filter(
       (key) => !game.artifacts.includes(key)
     );
@@ -1599,10 +2082,6 @@ function App() {
     refreshUI();
   }
 
-  /* =======================================================
-     APLICAÇÃO DOS ARTEFATOS
-  ======================================================= */
-
   function applyArtifact(artifactKey) {
     const game = gameRef.current;
 
@@ -1610,22 +2089,12 @@ function App() {
       case "mirror": {
         const familiarLevel = game.spells.familiar;
         const orbitLevel = game.spells.orbitFire;
+        const familiarTarget = Math.min(familiarLevel * 2, SPELLS.familiar.max * 2);
+        const orbitTarget = Math.min(orbitLevel * 2, SPELLS.orbitFire.max * 2);
 
-        const familiarTarget = Math.min(
-          familiarLevel * 2,
-          SPELLS.familiar.max * 2
-        );
-        const orbitTarget = Math.min(
-          orbitLevel * 2,
-          SPELLS.orbitFire.max * 2
-        );
-
-        while (
-          game.familiars.length < familiarTarget &&
-          familiarLevel > 0
-        ) {
+        while (game.familiars.length < familiarTarget && familiarLevel > 0) {
           game.familiars.push({
-            angle: Math.random() * Math.PI * 2,
+            angle: 0,
             timer: Math.random(),
             x: game.player.x,
             y: game.player.y,
@@ -1634,7 +2103,7 @@ function App() {
 
         while (game.orbitBalls.length < orbitTarget && orbitLevel > 0) {
           game.orbitBalls.push({
-            angle: Math.random() * Math.PI * 2,
+            angle: 0,
             timer: Math.random() * 5,
             state: "orbit",
             x: game.player.x,
@@ -1643,44 +2112,40 @@ function App() {
         }
         break;
       }
-
       case "broom": {
         game.player.speed *= 1.4;
         break;
       }
-
       case "repulsionRune": {
         game.artifactTimers.repulsion = 15;
         break;
       }
-
       case "healingRune": {
         game.artifactTimers.healing = 15;
         break;
       }
-
       case "stormSymbol": {
         game.artifactTimers.storm = 10;
         break;
       }
-
       default:
         break;
     }
   }
 
-  /* =======================================================
-     RUNA DE REPULSÃO
-  ======================================================= */
-
   function updateRepulsionRune(dt) {
     const game = gameRef.current;
     if (!game.artifacts.includes("repulsionRune")) return;
+
+    if (game.artifactTimers.repulsionActive > 0) {
+      game.artifactTimers.repulsionActive -= dt;
+    }
 
     game.artifactTimers.repulsion -= dt;
     if (game.artifactTimers.repulsion > 0) return;
 
     game.artifactTimers.repulsion = 15;
+    game.artifactTimers.repulsionActive = 2.0;
     const radius = 180;
 
     game.effects.push({
@@ -1693,33 +2158,29 @@ function App() {
 
     for (const enemy of game.enemies) {
       if (enemy.dead) continue;
-
       const d = distance(game.player, enemy);
       if (d >= radius) continue;
 
-      const angle = Math.atan2(
-        enemy.y - game.player.y,
-        enemy.x - game.player.x
-      );
+      const angle = Math.atan2(enemy.y - game.player.y, enemy.x - game.player.x);
       const force = (radius - d) * 2;
-
       enemy.x += Math.cos(angle) * force;
       enemy.y += Math.sin(angle) * force;
     }
   }
 
-  /* =======================================================
-     RUNA DE CURA
-  ======================================================= */
-
   function updateHealingRune(dt) {
     const game = gameRef.current;
     if (!game.artifacts.includes("healingRune")) return;
+
+    if (game.artifactTimers.healingActive > 0) {
+      game.artifactTimers.healingActive -= dt;
+    }
 
     game.artifactTimers.healing -= dt;
     if (game.artifactTimers.healing > 0) return;
 
     game.artifactTimers.healing = 15;
+    game.artifactTimers.healingActive = 2.0;
     game.player.hp = Math.min(game.player.maxHp, game.player.hp + 35);
 
     game.effects.push({
@@ -1731,10 +2192,6 @@ function App() {
     });
   }
 
-  /* =======================================================
-     TEMPESTADE / CHUVA
-  ======================================================= */
-
   function updateStorm(dt) {
     const game = gameRef.current;
     if (!game.artifacts.includes("stormSymbol")) return;
@@ -1745,7 +2202,6 @@ function App() {
       game.artifactTimers.storm = 10;
       game.stormActive = true;
       game.stormTimer = 5;
-
       game.effects.push({
         type: "stormStart",
         x: game.player.x,
@@ -1756,27 +2212,20 @@ function App() {
 
     if (game.stormActive) {
       game.stormTimer -= dt;
-
       for (const enemy of game.enemies) {
         if (enemy.dead) continue;
         if (distance(game.player, enemy) < 450) {
           enemy.wet = 10;
         }
       }
-
       if (game.stormTimer <= 0) {
         game.stormActive = false;
       }
     }
   }
 
-  /* =======================================================
-     CORRENTE DE RAIO
-  ======================================================= */
-
   function lightningChain(source) {
     const game = gameRef.current;
-
     const targets = [...game.enemies]
       .filter((enemy) => !enemy.dead && enemy !== source && enemy.wet > 0)
       .sort((a, b) => distance(source, a) - distance(source, b))
@@ -1791,23 +2240,16 @@ function App() {
         fromY: source.y,
         timer: 0.5,
       });
-
-      killEnemy(enemy);
+      killEnemy(enemy, true);
     }
   }
 
-  /* =======================================================
-     ATUALIZAÇÃO DOS ARTEFATOS E BUFFS
-  ======================================================= */
-
   function updateArtifacts(dt) {
     const game = gameRef.current;
-
     updateRepulsionRune(dt);
     updateHealingRune(dt);
     updateStorm(dt);
 
-    /* Temporizador de Dano x2 */
     if (game.damageMultiplierTimer > 0) {
       game.damageMultiplierTimer -= dt;
       if (game.damageMultiplierTimer <= 0) {
@@ -1816,7 +2258,6 @@ function App() {
       }
     }
 
-    /* Temporizador de XP x2 */
     if (game.xpMultiplierTimer > 0) {
       game.xpMultiplierTimer -= dt;
       if (game.xpMultiplierTimer <= 0) {
@@ -1855,10 +2296,6 @@ function App() {
     game.player.y = clamp(game.player.y, 0, WORLD_SIZE);
   }
 
-  /* =======================================================
-     CÂMERA
-  ======================================================= */
-
   function updateCamera(dt) {
     const game = gameRef.current;
     game.camera.x += (game.player.x - game.camera.x) * 8 * dt;
@@ -1866,7 +2303,7 @@ function App() {
   }
 
   /* =======================================================
-     ATAQUES AUTOMÁTICOS DAS NOVAS E ANTIGAS MAGIAS
+     ATAQUES AUTOMÁTICOS
   ======================================================= */
 
   function updateAttackTimers(dt) {
@@ -1881,49 +2318,34 @@ function App() {
     game.vinesTimer -= dt;
     game.humidityTimer -= dt;
 
-    /* TIRO BÁSICO */
     if (game.basicTimer <= 0) {
       fireBasicShot();
       game.basicTimer = 0.65;
     }
-
-    /* CHAMA */
     if (game.spells.fire > 0 && game.fireTimer <= 0) {
       castFire();
       game.fireTimer = 1.5;
     }
-
-    /* GELO */
     if (game.spells.ice > 0 && game.iceTimer <= 0) {
       castIce();
       game.iceTimer = 2.8;
     }
-
-    /* RAIO */
     if (game.spells.lightning > 0 && game.lightningTimer <= 0) {
       castLightning();
       game.lightningTimer = game.stormActive ? 0.8 : 4;
     }
-
-    /* POÇAS DE LAVA */
     if (game.spells.lava > 0 && game.lavaTimer <= 0) {
       castLava();
       game.lavaTimer = 4.5;
     }
-
-    /* METEORO */
     if (game.spells.meteor > 0 && game.meteorTimer <= 0) {
       castMeteor();
       game.meteorTimer = 3.8;
     }
-
-    /* VINHAS SOMBRIAS */
     if (game.spells.vines > 0 && game.vinesTimer <= 0) {
       castVines();
       game.vinesTimer = 5;
     }
-
-    /* UMIDADE ARCANA */
     if (game.spells.humidity > 0 && game.humidityTimer <= 0) {
       castHumidity();
       game.humidityTimer = 6;
@@ -1939,7 +2361,6 @@ function App() {
 
     for (const effect of game.effects) {
       effect.timer -= dt;
-
       if (effect.type === "nuclearShockwave") {
         effect.radius = Math.min(
           effect.maxRadius || 1400,
@@ -1952,20 +2373,12 @@ function App() {
   }
 
   /* =======================================================
-     LOOP PRINCIPAL DO JOGO
+     LOOP PRINCIPAL DO JOGO (UPDATE)
   ======================================================= */
 
   function update(dt) {
     const game = gameRef.current;
-
-    /*
-      PAUSA COMPLETA DO GAMEPLAY:
-      Quando o jogo está pausado (Level Up / Escolha de Artefato / GameOver),
-      nenhuma lógica de movimento, inimigo, projétil ou timer executa.
-    */
-    if (!game.running || game.paused) {
-      return;
-    }
+    if (!game.running || game.paused) return;
 
     game.time += dt;
 
@@ -1983,6 +2396,12 @@ function App() {
     updateShadow(dt);
     updateLavaPools(dt);
     updateMeteors(dt);
+    updateMistClouds(dt);
+    
+    updateSteamClouds(dt);
+    updateElectricPlants(dt);
+    updateSwampPools(dt);
+
     updateSouls(dt);
     updateArtifacts(dt);
     checkChests();
@@ -1993,6 +2412,8 @@ function App() {
       game.player.hp = 0;
       game.running = false;
       game.paused = true;
+      localStorage.removeItem("roguelike_save");
+      setSaveDataAvailable(false);
       setGameOver(true);
       refreshUI();
     }
@@ -2010,7 +2431,7 @@ function App() {
   }
 
   /* =======================================================
-     DESENHO DO FUNDO (FLORESTA NEGRA)
+     RENDERIZAÇÃO CANVAS
   ======================================================= */
 
   function drawBackground(ctx, width, height, camera) {
@@ -2040,37 +2461,24 @@ function App() {
             );
             if (seed < 0.55) continue;
 
-            const screen = worldToScreen(worldX, worldY, camera, width, height);
+            const screenP = worldToScreen(worldX, worldY, camera, width, height);
 
-            /* Tronco */
             ctx.fillStyle = "#121313";
-            ctx.fillRect(screen.x - 5, screen.y - 5, 10, 50);
+            ctx.fillRect(screenP.x - 5, screenP.y - 5, 10, 50);
 
-            /* Copa */
             ctx.fillStyle = "#111713";
             ctx.beginPath();
-            ctx.moveTo(screen.x, screen.y - 60);
-            ctx.lineTo(screen.x - 35, screen.y);
-            ctx.lineTo(screen.x - 18, screen.y + 5);
-            ctx.lineTo(screen.x - 28, screen.y + 25);
-            ctx.lineTo(screen.x, screen.y + 10);
-            ctx.lineTo(screen.x + 28, screen.y + 25);
-            ctx.lineTo(screen.x + 18, screen.y + 5);
-            ctx.lineTo(screen.x + 35, screen.y);
+            ctx.moveTo(screenP.x, screenP.y - 60);
+            ctx.lineTo(screenP.x - 35, screenP.y);
+            ctx.lineTo(screenP.x - 18, screenP.y + 5);
+            ctx.lineTo(screenP.x - 28, screenP.y + 25);
+            ctx.lineTo(screenP.x, screenP.y + 10);
+            ctx.lineTo(screenP.x + 28, screenP.y + 25);
+            ctx.lineTo(screenP.x + 18, screenP.y + 5);
+            ctx.lineTo(screenP.x + 35, screenP.y);
             ctx.closePath();
             ctx.fill();
           }
-        }
-
-        /* Névoa */
-        for (let i = 0; i < 35; i++) {
-          const x = (i * 271 - camera.x * 0.2) % (width + 200);
-          const y = (i * 149 - camera.y * 0.15) % (height + 200);
-
-          ctx.fillStyle = "rgba(120,130,130,0.07)";
-          ctx.beginPath();
-          ctx.arc(x, y, 30, 0, Math.PI * 2);
-          ctx.fill();
         }
       },
       width / 2,
@@ -2080,9 +2488,118 @@ function App() {
     );
   }
 
-  /* =======================================================
-     DESENHO DAS POÇAS DE LAVA
-  ======================================================= */
+  function drawMistClouds(ctx, game, camera, width, height) {
+    for (const cloud of game.mistClouds) {
+      const p = worldToScreen(cloud.x, cloud.y, camera, width, height);
+
+      ctx.save();
+      ctx.fillStyle = "rgba(70, 180, 240, 0.22)";
+      ctx.shadowBlur = 30;
+      ctx.shadowColor = "#40c0ff";
+
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, cloud.radius, 0, Math.PI * 2);
+      ctx.fill();
+
+      ctx.fillStyle = "rgba(220, 245, 255, 0.4)";
+      for (let i = 0; i < 5; i++) {
+        const angle = (game.time * 1.5 + i * 1.2) % (Math.PI * 2);
+        const bx = p.x + Math.cos(angle) * (cloud.radius * 0.45);
+        const by = p.y + Math.sin(angle) * (cloud.radius * 0.45);
+        ctx.beginPath();
+        ctx.arc(bx, by, 12, 0, Math.PI * 2);
+        ctx.fill();
+      }
+
+      ctx.restore();
+    }
+  }
+
+  function drawSteamClouds(ctx, game, camera, width, height) {
+    for (const cloud of game.steamClouds) {
+      const p = worldToScreen(cloud.x, cloud.y, camera, width, height);
+
+      ctx.save();
+      ctx.fillStyle = "rgba(235, 180, 255, 0.28)";
+      ctx.shadowBlur = 25;
+      ctx.shadowColor = "#ff99cc";
+
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, cloud.radius, 0, Math.PI * 2);
+      ctx.fill();
+
+      ctx.fillStyle = "rgba(255, 240, 250, 0.5)";
+      for (let i = 0; i < 4; i++) {
+        const angle = (game.time * 2.2 + i * 1.4) % (Math.PI * 2);
+        const bx = p.x + Math.cos(angle) * (cloud.radius * 0.5);
+        const by = p.y + Math.sin(angle) * (cloud.radius * 0.5);
+        ctx.beginPath();
+        ctx.arc(bx, by, 8, 0, Math.PI * 2);
+        ctx.fill();
+      }
+
+      ctx.restore();
+    }
+  }
+
+  function drawSwampPools(ctx, game, camera, width, height) {
+    for (const swamp of game.swampPools) {
+      const p = worldToScreen(swamp.x, swamp.y, camera, width, height);
+
+      ctx.save();
+      ctx.fillStyle = "rgba(35, 60, 30, 0.6)";
+      ctx.shadowBlur = 20;
+      ctx.shadowColor = "#3d8544";
+
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, swamp.radius, 0, Math.PI * 2);
+      ctx.fill();
+
+      ctx.strokeStyle = "#1b4d24";
+      ctx.lineWidth = 3;
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, swamp.radius * 0.8, 0, Math.PI * 1.6);
+      ctx.stroke();
+
+      ctx.restore();
+    }
+  }
+
+  function drawElectricPlants(ctx, game, camera, width, height) {
+    for (const plant of game.electricPlants) {
+      const p = worldToScreen(plant.x, plant.y, camera, width, height);
+
+      ctx.save();
+      ctx.translate(p.x, p.y);
+
+      ctx.shadowBlur = 25;
+      ctx.shadowColor = "#9eff30";
+      ctx.strokeStyle = "#9eff30";
+      ctx.lineWidth = 2.5;
+
+      ctx.beginPath();
+      ctx.moveTo(0, 15);
+      ctx.lineTo(0, -10);
+      ctx.lineTo(8, -20);
+      ctx.moveTo(0, -10);
+      ctx.lineTo(-8, -20);
+      ctx.stroke();
+
+      ctx.fillStyle = "#d4ff6b";
+      ctx.beginPath();
+      ctx.arc(0, -22, 9, 0, Math.PI * 2);
+      ctx.fill();
+
+      const rot = game.time * 8;
+      ctx.strokeStyle = "#ffffff";
+      ctx.beginPath();
+      ctx.moveTo(Math.cos(rot) * 14, -22 + Math.sin(rot) * 14);
+      ctx.lineTo(Math.cos(rot + Math.PI) * 14, -22 + Math.sin(rot + Math.PI) * 14);
+      ctx.stroke();
+
+      ctx.restore();
+    }
+  }
 
   function drawLavaPools(ctx, game, camera, width, height) {
     for (const pool of game.lavaPools) {
@@ -2093,21 +2610,21 @@ function App() {
         ctx,
         "lavaPool",
         () => {
-          ctx.shadowBlur = 25;
-          ctx.shadowColor = "#ff3300";
+          ctx.shadowBlur = pool.isCataclysm ? 35 : 25;
+          ctx.shadowColor = pool.isCataclysm ? "#ff0000" : "#ff3300";
 
-          ctx.fillStyle = "rgba(255, 68, 0, 0.65)";
+          ctx.fillStyle = pool.isCataclysm ? "rgba(255, 30, 0, 0.8)" : "rgba(255, 68, 0, 0.65)";
           ctx.beginPath();
           ctx.arc(p.x, p.y, pool.radius, 0, Math.PI * 2);
           ctx.fill();
 
-          ctx.fillStyle = "#ffcc00";
-          for (let i = 0; i < 4; i++) {
+          ctx.fillStyle = pool.isCataclysm ? "#fff2a6" : "#ffcc00";
+          for (let i = 0; i < (pool.isCataclysm ? 6 : 4); i++) {
             const angle = (game.time * 2 + i * 1.5) % (Math.PI * 2);
             const bx = p.x + Math.cos(angle) * (pool.radius * 0.5);
             const by = p.y + Math.sin(angle) * (pool.radius * 0.5);
             ctx.beginPath();
-            ctx.arc(bx, by, 6, 0, Math.PI * 2);
+            ctx.arc(bx, by, pool.isCataclysm ? 8 : 6, 0, Math.PI * 2);
             ctx.fill();
           }
         },
@@ -2120,33 +2637,27 @@ function App() {
     }
   }
 
-  /* =======================================================
-     DESENHO DAS RUNAS NÓRDICAS SUB-JOGADOR
-  ======================================================= */
-
   function drawPlayerRunes(ctx, game, camera, width, height) {
     const p = worldToScreen(game.player.x, game.player.y, camera, width, height);
-    const runeRadius = 65; // ~3x tamanho do bruxo
+    const runeRadius = 80;
 
     ctx.save();
     ctx.translate(p.x, p.y);
 
-    /* Runa da Repulsão (Nórdica: Algiz / Thurisaz) */
     if (game.artifacts.includes("repulsionRune")) {
+      const isActive = game.artifactTimers.repulsionActive > 0;
       ctx.save();
-      ctx.shadowBlur = 20;
-      ctx.shadowColor = "#b86cff";
-      ctx.strokeStyle = "rgba(184, 108, 255, 0.75)";
-      ctx.lineWidth = 2.5;
+      ctx.shadowBlur = isActive ? 30 : 0;
+      ctx.shadowColor = isActive ? "#b86cff" : "transparent";
+      ctx.strokeStyle = isActive ? "#b86cff" : "rgba(130, 130, 130, 0.35)";
+      ctx.lineWidth = isActive ? 3.5 : 2;
 
-      /* Círculo externo animado */
-      const rot = game.time * 0.8;
+      const rot = game.time * (isActive ? 1.5 : 0.4);
       ctx.rotate(rot);
       ctx.beginPath();
       ctx.arc(0, 0, runeRadius, 0, Math.PI * 2);
       ctx.stroke();
 
-      /* Desenho procedural da Runa Algiz (ᛉ) */
       ctx.beginPath();
       ctx.moveTo(0, -runeRadius * 0.75);
       ctx.lineTo(0, runeRadius * 0.75);
@@ -2158,21 +2669,20 @@ function App() {
       ctx.restore();
     }
 
-    /* Runa da Vida / Cura (Nórdica: Berkanan ᛒ / Laguz ᛚ) */
     if (game.artifacts.includes("healingRune")) {
+      const isActive = game.artifactTimers.healingActive > 0;
       ctx.save();
-      ctx.shadowBlur = 20;
-      ctx.shadowColor = "#55ff7c";
-      ctx.strokeStyle = "rgba(85, 255, 124, 0.75)";
-      ctx.lineWidth = 2.5;
+      ctx.shadowBlur = isActive ? 30 : 0;
+      ctx.shadowColor = isActive ? "#55ff7c" : "transparent";
+      ctx.strokeStyle = isActive ? "#55ff7c" : "rgba(130, 130, 130, 0.35)";
+      ctx.lineWidth = isActive ? 3.5 : 2;
 
-      const rot = -game.time * 0.6;
+      const rot = -game.time * (isActive ? 1.2 : 0.3);
       ctx.rotate(rot);
       ctx.beginPath();
       ctx.arc(0, 0, runeRadius * 0.85, 0, Math.PI * 2);
       ctx.stroke();
 
-      /* Desenho procedural da Runa Berkanan (ᛒ) */
       ctx.beginPath();
       ctx.moveTo(-runeRadius * 0.3, -runeRadius * 0.6);
       ctx.lineTo(-runeRadius * 0.3, runeRadius * 0.6);
@@ -2187,27 +2697,28 @@ function App() {
     ctx.restore();
   }
 
-  /* =======================================================
-     DESENHO DO JOGADOR (RENDERIZADO POR CIMA DAS RUNAS)
-  ======================================================= */
-
-  function drawPlayer(ctx, player, camera, width, height) {
+  function drawPlayer(ctx, player, camera, width, height, game) {
     const p = worldToScreen(player.x, player.y, camera, width, height);
+    const char = CHARACTERS.find((c) => c.id === game.selectedCharacter) || CHARACTERS[0];
 
     ctx.save();
     ctx.translate(p.x, p.y);
 
+    if (game.playerIsInvincible) {
+      ctx.shadowBlur = 30;
+      ctx.shadowColor = "#40c0ff";
+      ctx.globalAlpha = 0.85;
+    }
+
     drawSpriteOrFallback(
       ctx,
-      "player",
+      char.spriteKey || "player",
       () => {
-        /* Sombra */
         ctx.fillStyle = "rgba(0,0,0,0.5)";
         ctx.beginPath();
         ctx.ellipse(0, 25, 27, 9, 0, 0, Math.PI * 2);
         ctx.fill();
 
-        /* Capa */
         ctx.fillStyle = "#09080d";
         ctx.beginPath();
         ctx.moveTo(-17, -2);
@@ -2217,14 +2728,13 @@ function App() {
         ctx.closePath();
         ctx.fill();
 
-        ctx.strokeStyle = "#40374d";
+        ctx.strokeStyle = char.color || "#40374d";
         ctx.lineWidth = 2;
         ctx.beginPath();
         ctx.moveTo(-14, 3);
         ctx.quadraticCurveTo(0, 12, 14, 3);
         ctx.stroke();
 
-        /* Corpo */
         ctx.fillStyle = "#211a28";
         ctx.beginPath();
         ctx.moveTo(-12, -4);
@@ -2234,13 +2744,11 @@ function App() {
         ctx.closePath();
         ctx.fill();
 
-        /* Cabeça */
         ctx.fillStyle = "#d5b5a4";
         ctx.beginPath();
         ctx.arc(0, -15, 10, 0, Math.PI * 2);
         ctx.fill();
 
-        /* Chapéu */
         ctx.fillStyle = "#0a080e";
         ctx.beginPath();
         ctx.moveTo(-20, -21);
@@ -2252,12 +2760,10 @@ function App() {
         ctx.closePath();
         ctx.fill();
 
-        /* Olhos */
-        ctx.fillStyle = "#c77dff";
+        ctx.fillStyle = game.playerIsInvincible ? "#60d0ff" : char.color || "#c77dff";
         ctx.fillRect(-5, -16, 3, 2);
         ctx.fillRect(2, -16, 3, 2);
 
-        /* Cajado */
         ctx.strokeStyle = "#59402d";
         ctx.lineWidth = 3;
         ctx.beginPath();
@@ -2266,8 +2772,8 @@ function App() {
         ctx.stroke();
 
         ctx.shadowBlur = 15;
-        ctx.shadowColor = "#a86cff";
-        ctx.fillStyle = "#a86cff";
+        ctx.shadowColor = char.color || "#a86cff";
+        ctx.fillStyle = char.color || "#a86cff";
         ctx.beginPath();
         ctx.arc(28, -27, 4, 0, Math.PI * 2);
         ctx.fill();
@@ -2281,10 +2787,6 @@ function App() {
     ctx.restore();
   }
 
-  /* =======================================================
-     DESENHO DO INIMIGO (COM ÍCONE 💧 SE ESTIVER MOLHADO)
-  ======================================================= */
-
   function drawEnemy(ctx, enemy, camera, width, height) {
     const p = worldToScreen(enemy.x, enemy.y, camera, width, height);
 
@@ -2292,7 +2794,7 @@ function App() {
     ctx.translate(p.x, p.y);
 
     const size = enemy.size;
-    const scale = enemy.isBoss ? 1.3 : 1; // Boss rebalanceado
+    const scale = enemy.isBoss ? 1.3 : 1;
     ctx.scale(scale, scale);
 
     if (enemy.isBoss) {
@@ -2304,7 +2806,6 @@ function App() {
       ctx,
       enemy.isBoss ? "boss" : "darkWitch",
       () => {
-        /* Corpo */
         ctx.fillStyle = enemy.color;
         ctx.beginPath();
         ctx.moveTo(-size / 2, 0);
@@ -2314,13 +2815,11 @@ function App() {
         ctx.closePath();
         ctx.fill();
 
-        /* Cabeça */
         ctx.fillStyle = "#6d5960";
         ctx.beginPath();
         ctx.arc(0, -size / 2, size / 2.2, 0, Math.PI * 2);
         ctx.fill();
 
-        /* Chapéu */
         ctx.fillStyle = "#09070b";
         ctx.beginPath();
         ctx.moveTo(-size, -size / 2);
@@ -2329,7 +2828,6 @@ function App() {
         ctx.closePath();
         ctx.fill();
 
-        /* Olhos */
         ctx.fillStyle = enemy.wet > 0 ? "#62d9ff" : "#d85cff";
         ctx.fillRect(-size / 4, -size / 2, 3, 2);
         ctx.fillRect(size / 8, -size / 2, 3, 2);
@@ -2340,7 +2838,6 @@ function App() {
       size * 2
     );
 
-    /* Barra de Vida */
     ctx.fillStyle = "#30151b";
     ctx.fillRect(-size, -size * 2.3, size * 2, 4);
 
@@ -2352,7 +2849,6 @@ function App() {
       4
     );
 
-    /* Congelamento */
     if (enemy.frozen > 0) {
       ctx.strokeStyle = "#70dfff";
       ctx.lineWidth = 3;
@@ -2361,14 +2857,12 @@ function App() {
       ctx.stroke();
     }
 
-    /* Ícone de Gota de Água 💧 se estiver molhado */
     if (enemy.wet > 0) {
       ctx.font = "14px serif";
       ctx.textAlign = "center";
       ctx.fillText("💧", 0, -size * 2.6);
     }
 
-    /* Vinhas de Prisão */
     if (enemy.rootedTimer > 0) {
       ctx.strokeStyle = "#2d6a4f";
       ctx.lineWidth = 4;
@@ -2380,16 +2874,11 @@ function App() {
     ctx.restore();
   }
 
-  /* =======================================================
-     DESENHO DE METEOROS
-  ======================================================= */
-
   function drawMeteors(ctx, game, camera, width, height) {
     for (const m of game.meteors) {
       const targetP = worldToScreen(m.x, m.y, camera, width, height);
 
       ctx.save();
-      /* Alvo no chão */
       ctx.strokeStyle = "rgba(255, 60, 0, 0.85)";
       ctx.lineWidth = 2;
       ctx.setLineDash([6, 4]);
@@ -2397,7 +2886,6 @@ function App() {
       ctx.arc(targetP.x, targetP.y, m.radius, 0, Math.PI * 2);
       ctx.stroke();
 
-      /* Meteoro caindo */
       const currP = worldToScreen(m.currentX, m.currentY, camera, width, height);
       ctx.shadowBlur = 20;
       ctx.shadowColor = "#ff5500";
@@ -2410,10 +2898,6 @@ function App() {
       ctx.restore();
     }
   }
-
-  /* =======================================================
-     DESENHO DE PROJÉTEIS
-  ======================================================= */
 
   function drawProjectiles(ctx, game, camera, width, height) {
     for (const projectile of game.projectiles) {
@@ -2432,21 +2916,17 @@ function App() {
     }
   }
 
-  /* =======================================================
-     DESENHO DE ORBES
-  ======================================================= */
-
   function drawOrbits(ctx, game, camera, width, height) {
     for (const ball of game.orbitBalls) {
       const p = worldToScreen(ball.x, ball.y, camera, width, height);
 
       ctx.save();
       ctx.shadowBlur = 25;
-      ctx.shadowColor = game.fusions.inferno ? "#ff2200" : "#ff6b18";
-      ctx.fillStyle = game.fusions.inferno ? "#ff3300" : "#ff7b22";
+      ctx.shadowColor = "#ff6b18";
+      ctx.fillStyle = "#ff7b22";
 
       ctx.beginPath();
-      ctx.arc(p.x, p.y, game.fusions.inferno ? 16 : 11, 0, Math.PI * 2);
+      ctx.arc(p.x, p.y, 12, 0, Math.PI * 2);
       ctx.fill();
 
       ctx.fillStyle = "#ffd166";
@@ -2458,18 +2938,15 @@ function App() {
     }
   }
 
-  /* =======================================================
-     DESENHO DE FAMILIARES
-  ======================================================= */
-
   function drawFamiliars(ctx, game, camera, width, height) {
+    const isAbismo = game.fusions.abismoVivo;
     for (const familiar of game.familiars) {
       const p = worldToScreen(familiar.x, familiar.y, camera, width, height);
 
       ctx.save();
       ctx.shadowBlur = 20;
-      ctx.shadowColor = game.fusions.abismo ? "#800080" : "#b978ff";
-      ctx.fillStyle = game.fusions.abismo ? "#4b0082" : "#d9b4ff";
+      ctx.shadowColor = isAbismo ? "#800080" : "#b978ff";
+      ctx.fillStyle = isAbismo ? "#4b0082" : "#d9b4ff";
 
       ctx.beginPath();
       ctx.moveTo(p.x, p.y - 14);
@@ -2487,22 +2964,11 @@ function App() {
     }
   }
 
-  /* =======================================================
-     DESENHO DE BAÚS
-  ======================================================= */
-
   function drawChests(ctx, game, camera, width, height) {
-    const chestColors = [
-      "#66d9ff", // xp
-      "#ff623f", // damage
-      "#d76cff", // level
-      "#68e08a", // heal
-      "#ffcf4d", // nuke
-    ];
+    const chestColors = ["#66d9ff", "#ff623f", "#d76cff", "#68e08a", "#ffcf4d"];
 
     for (const chest of game.chests) {
       if (chest.opened) continue;
-
       const p = worldToScreen(chest.x, chest.y, camera, width, height);
 
       ctx.save();
@@ -2520,10 +2986,6 @@ function App() {
       ctx.restore();
     }
   }
-
-  /* =======================================================
-     DESENHO DE ALMAS
-  ======================================================= */
 
   function drawSouls(ctx, game, camera, width, height) {
     const soulColors = {
@@ -2557,10 +3019,6 @@ function App() {
     }
   }
 
-  /* =======================================================
-     DESENHO DE EFEITOS & FLASH DA BOMBA
-  ======================================================= */
-
   function drawEffects(ctx, game, camera, width, height) {
     for (const effect of game.effects) {
       const p = worldToScreen(effect.x, effect.y, camera, width, height);
@@ -2573,20 +3031,6 @@ function App() {
         ctx.fillStyle = "rgba(255, 102, 0, 0.6)";
         ctx.beginPath();
         ctx.arc(p.x, p.y, effect.radius, 0, Math.PI * 2);
-        ctx.fill();
-      }
-
-      if (effect.type === "humidityCloud") {
-        ctx.fillStyle = "rgba(100, 200, 255, 0.15)";
-        ctx.beginPath();
-        ctx.arc(p.x, p.y, effect.radius, 0, Math.PI * 2);
-        ctx.fill();
-      }
-
-      if (effect.type === "steamCloud") {
-        ctx.fillStyle = "rgba(230, 230, 250, 0.4)";
-        ctx.beginPath();
-        ctx.arc(p.x, p.y, 25, 0, Math.PI * 2);
         ctx.fill();
       }
 
@@ -2676,7 +3120,6 @@ function App() {
       if (effect.type === "death") {
         ctx.strokeStyle = "#d7a8ff";
         ctx.lineWidth = 3;
-
         ctx.beginPath();
         ctx.arc(p.x, p.y, 20, 0, Math.PI * 2);
         ctx.stroke();
@@ -2685,10 +3128,6 @@ function App() {
       ctx.restore();
     }
   }
-
-  /* =======================================================
-     DESENHO DA TEMPESTADE / CHUVA
-  ======================================================= */
 
   function drawStorm(ctx, game, width, height) {
     if (!game.stormActive) return;
@@ -2714,10 +3153,6 @@ function App() {
     ctx.restore();
   }
 
-  /* =======================================================
-     RENDERIZAÇÃO PRINCIPAL (DRAW)
-  ======================================================= */
-
   function draw() {
     const canvas = canvasRef.current;
     if (!canvas) return;
@@ -2730,9 +3165,13 @@ function App() {
     ctx.clearRect(0, 0, width, height);
 
     drawBackground(ctx, width, height, game.camera);
+    drawMistClouds(ctx, game, game.camera, width, height);
+    drawSwampPools(ctx, game, game.camera, width, height);
+    drawSteamClouds(ctx, game, game.camera, width, height);
     drawLavaPools(ctx, game, game.camera, width, height);
-    drawPlayerRunes(ctx, game, game.camera, width, height); // Runas desenhadas abaixo do jogador
+    drawPlayerRunes(ctx, game, game.camera, width, height);
     drawStorm(ctx, game, width, height);
+    drawElectricPlants(ctx, game, game.camera, width, height);
 
     drawChests(ctx, game, game.camera, width, height);
     drawSouls(ctx, game, game.camera, width, height);
@@ -2745,12 +3184,12 @@ function App() {
     drawOrbits(ctx, game, game.camera, width, height);
     drawFamiliars(ctx, game, game.camera, width, height);
     drawProjectiles(ctx, game, game.camera, width, height);
-    drawPlayer(ctx, game.player, game.camera, width, height); // Jogador desenhado por cima das runas
+    drawPlayer(ctx, game.player, game.camera, width, height, game);
     drawEffects(ctx, game, game.camera, width, height);
   }
 
   /* =======================================================
-     HOOK PRINCIPAL - LOOP ÚNICO DE ANIMAÇÃO E EVENTOS
+     HOOK PRINCIPAL - LOOP DE ANIMAÇÃO E ATALHOS
   ======================================================= */
 
   useEffect(() => {
@@ -2766,6 +3205,12 @@ function App() {
     window.addEventListener("resize", resize);
 
     const handleKeyDown = (event) => {
+      if (event.key === "Escape" || event.key === "p" || event.key === "P") {
+        if (screen === "game") {
+          togglePause();
+          return;
+        }
+      }
       gameRef.current.keys[event.key] = true;
     };
 
@@ -2783,8 +3228,10 @@ function App() {
       const dt = Math.min((now - last) / 1000, 0.05);
       last = now;
 
-      update(dt);
-      draw();
+      if (screen === "game") {
+        update(dt);
+        draw();
+      }
 
       animationFrame = requestAnimationFrame(loop);
     }
@@ -2797,210 +3244,538 @@ function App() {
       window.removeEventListener("keydown", handleKeyDown);
       window.removeEventListener("keyup", handleKeyUp);
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [screen]);
+
+  /* COMPRA NA LOJA */
+  function buyShopUpgrade(item) {
+    const currentLevel = permanentStats[item.id] || 0;
+    if (currentLevel >= item.maxLevel) return;
+    if (soulsBank < item.cost) return;
+
+    const newBank = soulsBank - item.cost;
+    const newStats = {
+      ...permanentStats,
+      [item.id]: currentLevel + 1,
+    };
+
+    setSoulsBank(newBank);
+    setPermanentStats(newStats);
+    localStorage.setItem("roguelike_bank", newBank.toString());
+    localStorage.setItem("roguelike_upgrades", JSON.stringify(newStats));
+  }
 
   const game = gameRef.current;
+  const currentChar = CHARACTERS.find((c) => c.id === selectedCharacter) || CHARACTERS[0];
 
   return (
     <div className="game">
       <canvas ref={canvasRef} />
 
-      <div className="hud">
-        <div className="top-left">
-          <div className="level">LVL {game.player.level}</div>
-          <div className="xp-bar">
-            <div
-              className="xp-fill"
-              style={{
-                width: `${Math.min(
-                  100,
-                  (game.player.xp / game.player.xpNeeded) * 100
-                )}%`,
-              }}
-            />
-          </div>
-          <div className="xp-text">
-            {Math.floor(game.player.xp)} / {game.player.xpNeeded} XP
-          </div>
-        </div>
+      {/* =========================================================
+          TELA 1: MENU PRINCIPAL
+      ========================================================= */}
+      {screen === "menu" && (
+        <div className="menu-overlay">
+          <div className="menu-container">
+            <h1 className="game-logo-title">ROGUELIKE REACT</h1>
+            <div className="game-subtitle">A NOITE DOS BRUXOS</div>
 
-        <div className="hp-container">
-          <div className="hp-label">VIDA</div>
-          <div className="hp-bar">
-            <div
-              className="hp-fill"
-              style={{
-                width: `${(game.player.hp / game.player.maxHp) * 100}%`,
-              }}
-            />
-          </div>
-        </div>
-
-        <div className="time">{Math.floor(game.time)}s</div>
-        <div className="wave">WAVE {game.wave}</div>
-
-        <div className="controls">
-          <b>WASD</b> / <b>SETAS</b> para mover
-          <br />
-          As magias atacam automaticamente
-        </div>
-
-        <div className="spell-list">
-          {Object.entries(game.spells)
-            .filter(([, level]) => level > 0)
-            .map(([key, level]) => (
-              <div className="spell-mini" key={key}>
-                <span>{SPELLS[key].icon}</span>
-                <span>{SPELLS[key].name}</span>
-                <b>{level}/5</b>
-              </div>
-            ))}
-          {Object.entries(game.fusions)
-            .filter(([, active]) => active)
-            .map(([fusionId]) => {
-              const combo = COMBINATIONS.find((c) => c.id === fusionId);
-              return (
-                <div className="spell-mini fusion-mini" key={fusionId}>
-                  <span>{combo?.icon || "🔮"}</span>
-                  <span>{combo?.name || fusionId}</span>
-                  <b>MAX</b>
-                </div>
-              );
-            })}
-        </div>
-      </div>
-
-      {levelUpOptions.length > 0 && (
-        <div className="level-overlay">
-          <div className="spellbook">
-            <div className="book-page left-page">
-              <div className="book-title">✦ GRIMÓRIO ✦</div>
-              <p className="book-subtitle">Escolha uma magia ou fusão</p>
-              <div className="choices">
-                {levelUpOptions.map((choiceKey) => {
-                  /* Se for uma opção de Fusão */
-                  if (choiceKey.startsWith("fusion_")) {
-                    const fusionId = choiceKey.replace("fusion_", "");
-                    const combo = COMBINATIONS.find((c) => c.id === fusionId);
-                    return (
-                      <button
-                        className="spell-choice fusion-choice"
-                        key={choiceKey}
-                        onClick={() => chooseSpell(choiceKey)}
-                      >
-                        <span className="choice-icon">{combo.icon}</span>
-                        <span className="choice-name">{combo.name}</span>
-                        <span className="choice-level">✧ FUSÃO ✧</span>
-                        <span className="choice-description">
-                          {combo.description}
-                        </span>
-                      </button>
-                    );
-                  }
-
-                  const spell = SPELLS[choiceKey];
-                  return (
-                    <button
-                      className="spell-choice"
-                      key={choiceKey}
-                      onClick={() => chooseSpell(choiceKey)}
-                    >
-                      <span className="choice-icon">{spell.icon}</span>
-                      <span className="choice-name">{spell.name}</span>
-                      <span className="choice-level">
-                        Nv. {game.spells[choiceKey] + 1}/{spell.max}
-                      </span>
-                      <span className="choice-description">
-                        {spell.description}
-                      </span>
-                    </button>
-                  );
-                })}
+            <div className="menu-character-preview">
+              <div className="preview-avatar">{currentChar.icon}</div>
+              <div className="preview-info">
+                <div className="preview-name">{currentChar.name}, {currentChar.title}</div>
+                <div className="preview-spell">✦ Magia Inicial Lv.2: <b>{SPELLS[currentChar.spellKey]?.name}</b> ({currentChar.icon})</div>
+                <div className="preview-desc">{currentChar.description}</div>
               </div>
             </div>
 
-            <div className="book-page right-page">
-              <div className="book-title">✧ FUSÕES ✧</div>
-              <p className="book-subtitle">Combinações Desbloqueáveis</p>
-              {COMBINATIONS.map((combo) => {
-                const isUnlocked =
-                  game.spells[combo.keyA] >= 5 && game.spells[combo.keyB] >= 5;
-                const isAcquired = game.fusions[combo.id];
+            <div className="menu-buttons-list">
+              <button
+                className="btn-menu-primary"
+                onClick={() => startNewGame(selectedCharacter, selectedMap)}
+              >
+                ⚔️ JOGAR
+              </button>
 
+              {saveDataAvailable && (
+                <button
+                  className="btn-menu-continue"
+                  onClick={loadGameFromStorage}
+                >
+                  📜 CONTINUAR PARTIDA SALVA
+                </button>
+              )}
+
+              <button
+                className="btn-menu-secondary"
+                onClick={() => setScreen("characters")}
+              >
+                🧙‍♂️ PERSONAGENS ({CHARACTERS.length})
+              </button>
+
+              <button
+                className="btn-menu-secondary"
+                onClick={() => setScreen("spells")}
+              >
+                📖 MAGIAS (10)
+              </button>
+
+              <button
+                className="btn-menu-secondary"
+                onClick={() => setScreen("maps")}
+              >
+                🗺️ MAPAS
+              </button>
+
+              <button
+                className="btn-menu-secondary"
+                onClick={() => setScreen("shop")}
+              >
+                🏛️ LOJA ARCANA ({soulsBank} 🪙)
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* =========================================================
+          TELA 2: SELEÇÃO DE PERSONAGENS (EXATAMENTE 10)
+      ========================================================= */}
+      {screen === "characters" && (
+        <div className="screen-overlay">
+          <div className="screen-header">
+            <h1 className="screen-title">✦ ESCOLHA SEU PERSONAGEM ✦</h1>
+            <p className="screen-subtitle">
+              Cada herói arcano inicia com sua magia principal no <b>Lv. 2</b> e as demais 9 no <b>Lv. 1</b>.
+            </p>
+          </div>
+
+          <div className="screen-content-wrapper">
+            <div className="characters-grid">
+              {CHARACTERS.map((char) => {
+                const isSelected = selectedCharacter === char.id;
                 return (
                   <div
-                    className={`combination ${isUnlocked ? "unlocked" : ""}`}
-                    key={combo.id}
+                    key={char.id}
+                    className={`character-card ${isSelected ? "selected" : ""} ${
+                      !char.unlocked ? "locked" : ""
+                    }`}
+                    onClick={() => {
+                      if (char.unlocked) setSelectedCharacter(char.id);
+                    }}
                   >
-                    <div className="combo-icon">{combo.icon}</div>
-                    <div>
-                      <strong>
-                        {combo.name}{" "}
-                        {isAcquired ? "✓" : isUnlocked ? "🔓 APTO" : "🔒"}
-                      </strong>
-                      <div className="combo-spells">
-                        {combo.a} + {combo.b}
-                      </div>
-                      <div className="combo-requirement">
-                        {combo.requirement}
-                      </div>
+                    <div className="char-icon">{char.icon}</div>
+                    <div className="char-name">{char.name}</div>
+                    <div className="char-title">{char.title}</div>
+                    <div className="char-spell-badge">
+                      Principal: <b>{SPELLS[char.spellKey]?.name} (Nv.2)</b>
                     </div>
+                    <div className="char-desc">{char.description}</div>
+                    <button className="char-select-btn">
+                      {isSelected ? "✦ SELECIONADO ✦" : "SELECIONAR"}
+                    </button>
                   </div>
                 );
               })}
             </div>
           </div>
+
+          <button className="btn-back-menu" onClick={() => setScreen("menu")}>
+            ⬅ VOLTAR AO MENU
+          </button>
         </div>
       )}
 
-      {artifactChoices.length > 0 && (
-        <div className="level-overlay">
-          <div className="artifact-book">
-            <div className="artifact-title">👑 RECOMPENSA DO BOSS 👑</div>
-            <div className="artifact-subtitle">
-              O Bruxo Primordial foi derrotado.
-              <br />
-              Escolha um artefato.
-            </div>
+      {/* =========================================================
+          TELA 3: ENCICLOPÉDIA DE MAGIAS (10 MAGIAS)
+      ========================================================= */}
+      {screen === "spells" && (
+        <div className="screen-overlay">
+          <div className="screen-header">
+            <h1 className="screen-title">✦ COMPÊNDIO DE MAGIAS ✦</h1>
+            <p className="screen-subtitle">
+              Conheça as 10 artes arcanas ancestrais e suas propriedades elementais.
+            </p>
+          </div>
 
-            <div className="artifact-grid">
-              {artifactChoices.map((artifactKey) => {
-                const artifact = ARTIFACTS[artifactKey];
-                return (
-                  <button
-                    key={artifactKey}
-                    className="artifact-card"
-                    onClick={() => chooseArtifact(artifactKey)}
-                  >
-                    <div className="artifact-icon">{artifact.icon}</div>
-                    <div className="artifact-name">{artifact.name}</div>
-                    <div className="artifact-description">
-                      {artifact.description}
+          <div className="screen-content-wrapper">
+            <div className="spells-grid">
+              {Object.values(SPELLS).map((spell) => (
+                <div key={spell.id} className="spell-encyclopedia-card">
+                  <div className="spell-header-row">
+                    <span className="spell-big-icon">{spell.icon}</span>
+                    <div className="spell-main-info">
+                      <div className="spell-main-name">{spell.name}</div>
+                      <div className="spell-type-tag">{spell.type}</div>
                     </div>
-                  </button>
+                  </div>
+                  <div className="spell-card-body">{spell.description}</div>
+                  <div className="spell-details-box">
+                    <b>Efeito em Combate:</b> {spell.details}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <button className="btn-back-menu" onClick={() => setScreen("menu")}>
+            ⬅ VOLTAR AO MENU
+          </button>
+        </div>
+      )}
+
+      {/* =========================================================
+          TELA 4: MAPAS
+      ========================================================= */}
+      {screen === "maps" && (
+        <div className="screen-overlay">
+          <div className="screen-header">
+            <h1 className="screen-title">✦ MAPAS & BIOMAS ✦</h1>
+            <p className="screen-subtitle">
+              Selecione o domínio para enfrentar a horda de bruxos sombrios.
+            </p>
+          </div>
+
+          <div className="screen-content-wrapper">
+            <div className="maps-grid">
+              {MAPS.map((map) => {
+                const isSelected = selectedMap === map.id;
+                return (
+                  <div
+                    key={map.id}
+                    className={`map-card ${isSelected ? "selected" : ""} ${
+                      !map.unlocked ? "locked" : ""
+                    }`}
+                    onClick={() => {
+                      if (map.unlocked) setSelectedMap(map.id);
+                    }}
+                  >
+                    <div className="map-icon">{map.icon}</div>
+                    <div className="map-name">{map.name}</div>
+                    <div className="map-desc">{map.description}</div>
+                    {map.unlocked ? (
+                      <span className="map-badge-unlocked">✦ DESBLOQUEADO ✦</span>
+                    ) : (
+                      <span className="map-badge-locked">🔒 {map.lockText}</span>
+                    )}
+                  </div>
                 );
               })}
             </div>
-
-            <div className="boss-reward">✦ +1 NÍVEL CONCEDIDO ✦</div>
           </div>
+
+          <button className="btn-back-menu" onClick={() => setScreen("menu")}>
+            ⬅ VOLTAR AO MENU
+          </button>
         </div>
       )}
 
-      {gameOver && (
-        <div className="game-over">
-          <div className="game-over-box">
-            <h1>☠ FIM DA NOITE ☠</h1>
-            <p>
-              Você sobreviveu por <b>{Math.floor(game.time)}</b> segundos.
+      {/* =========================================================
+          TELA 5: LOJA ARCANA
+      ========================================================= */}
+      {screen === "shop" && (
+        <div className="screen-overlay">
+          <div className="screen-header">
+            <h1 className="screen-title">✦ LOJA ARCANA ✦</h1>
+            <p className="screen-subtitle">
+              Adquira aprimoramentos permanentes para todos os seus heróis.
             </p>
-            <p>
-              Nível alcançado: <b>{game.player.level}</b>
-            </p>
-            <button onClick={resetGame}>Tentar novamente</button>
           </div>
+
+          <div className="shop-balance-bar">
+            🪙 Saldo Acumulado: <b>{soulsBank} Almas / Moedas</b>
+          </div>
+
+          <div className="screen-content-wrapper">
+            <div className="shop-grid">
+              {SHOP_ITEMS.map((item) => {
+                const currentLv = permanentStats[item.id] || 0;
+                const isMax = currentLv >= item.maxLevel;
+                const canBuy = soulsBank >= item.cost && !isMax;
+
+                return (
+                  <div key={item.id} className="shop-card">
+                    <div className="shop-item-header">
+                      <span className="shop-item-icon">{item.icon}</span>
+                      <div className="shop-item-name">{item.name}</div>
+                    </div>
+                    <div className="shop-item-desc">{item.description}</div>
+                    <div className="shop-item-level">
+                      Nível: <b>{currentLv}/{item.maxLevel}</b>
+                    </div>
+                    <button
+                      className="shop-buy-btn"
+                      disabled={!canBuy}
+                      onClick={() => buyShopUpgrade(item)}
+                    >
+                      {isMax ? "MÁXIMO ALCANÇADO" : `UPGRADE (${item.cost} 🪙)`}
+                    </button>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+
+          <button className="btn-back-menu" onClick={() => setScreen("menu")}>
+            ⬅ VOLTAR AO MENU
+          </button>
         </div>
+      )}
+
+      {/* =========================================================
+          TELA 6: JOGO EM ANDAMENTO (HUD & GAMEPLAY)
+      ========================================================= */}
+      {screen === "game" && (
+        <>
+          <button className="pause-btn-hud" onClick={togglePause}>
+            ⏸ PAUSA (Esc/P)
+          </button>
+
+          <div className="hud">
+            <div className="top-left">
+              <div className="level">
+                LVL {game.player.level}
+                {game.playerIsInvincible && (
+                  <span className="invincible-badge">🛡️ INVENCÍVEL</span>
+                )}
+              </div>
+              <div className="xp-bar">
+                <div
+                  className="xp-fill"
+                  style={{
+                    width: `${Math.min(
+                      100,
+                      (game.player.xp / game.player.xpNeeded) * 100
+                    )}%`,
+                  }}
+                />
+              </div>
+              <div className="xp-text">
+                {Math.floor(game.player.xp)} / {game.player.xpNeeded} XP
+              </div>
+            </div>
+
+            <div className="hp-container">
+              <div className="hp-label">VIDA</div>
+              <div className="hp-bar">
+                <div
+                  className="hp-fill"
+                  style={{
+                    width: `${(game.player.hp / game.player.maxHp) * 100}%`,
+                  }}
+                />
+              </div>
+            </div>
+
+            <div className="time">{Math.floor(game.time)}s</div>
+            <div className="wave">WAVE {game.wave}</div>
+
+            <div className="controls">
+              <b>WASD</b> / <b>SETAS</b> para mover
+              <br />
+              As magias atacam automaticamente
+            </div>
+
+            <div className="spell-list">
+              {Object.entries(game.spells)
+                .filter(([, level]) => level > 0)
+                .map(([key, level]) => (
+                  <div className="spell-mini" key={key}>
+                    <span>{SPELLS[key]?.icon}</span>
+                    <span>{SPELLS[key]?.name}</span>
+                    <b>{level}/5</b>
+                  </div>
+                ))}
+            </div>
+          </div>
+
+          {/* MODAL DE PAUSA */}
+          {isPausedUI && (
+            <div className="pause-overlay">
+              <div className="pause-box">
+                <h2 className="pause-title">⏸ JOGO PAUSADO</h2>
+                <div className="pause-stats-grid">
+                  <div className="pause-stat-item">
+                    Personagem: <b>{currentChar.name} ({currentChar.icon})</b>
+                  </div>
+                  <div className="pause-stat-item">
+                    Nível Atual: <b>{game.player.level}</b>
+                  </div>
+                  <div className="pause-stat-item">
+                    Tempo: <b>{Math.floor(game.time)}s</b>
+                  </div>
+                  <div className="pause-stat-item">
+                    Wave: <b>{game.wave}</b>
+                  </div>
+                  <div className="pause-stat-item">
+                    Inimigos Derrotados: <b>{game.kills}</b>
+                  </div>
+                  <div className="pause-stat-item">
+                    Fusões Ativas: <b>{Object.values(game.fusions).filter(Boolean).length}/5</b>
+                  </div>
+                </div>
+
+                <div className="pause-buttons-col">
+                  <button className="btn-pause-action btn-resume" onClick={togglePause}>
+                    ▶️ CONTINUAR PARTIDA
+                  </button>
+                  <button className="btn-pause-action btn-save-quit" onClick={saveGameToStorage}>
+                    💾 SALVAR E SAIR PARA O MENU
+                  </button>
+                  <button
+                    className="btn-pause-action btn-restart"
+                    onClick={() => startNewGame(selectedCharacter, selectedMap)}
+                  >
+                    🔄 REINICIAR PARTIDA
+                  </button>
+                  <button
+                    className="btn-pause-action btn-menu-exit"
+                    onClick={() => {
+                      game.paused = true;
+                      setIsPausedUI(false);
+                      setScreen("menu");
+                    }}
+                  >
+                    🚪 SAIR PARA O MENU (SEM SALVAR)
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* MODAL DO GRIMÓRIO (LEVEL UP) */}
+          {levelUpOptions.length > 0 && (
+            <div className="level-overlay">
+              <div className="spellbook">
+                <div className="book-page left-page">
+                  <div className="book-title">✦ GRIMÓRIO ✦</div>
+                  <p className="book-subtitle">Escolha uma magia para aprimorar</p>
+                  <div className="choices">
+                    {levelUpOptions.map((spellKey) => {
+                      const spell = SPELLS[spellKey];
+                      const currentLv = game.spells[spellKey] || 0;
+
+                      return (
+                        <button
+                          className="spell-choice"
+                          key={spellKey}
+                          onClick={() => chooseSpell(spellKey)}
+                        >
+                          <span className="choice-icon">{spell.icon}</span>
+                          <span className="choice-name">{spell.name}</span>
+                          <span className="choice-level">
+                            Nv. {currentLv + 1}/{spell.max}
+                          </span>
+                          <span className="choice-description">
+                            {spell.description}
+                          </span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                {/* PÁGINA DIREITA: AS 5 FUSÕES SUPREMAS (SEM NÍVEL) */}
+                <div className="book-page right-page">
+                  <div className="book-title">✧ FUSÕES ✧</div>
+                  <p className="book-subtitle">Combinações Desbloqueáveis</p>
+                  {COMBINATIONS.map((combo) => {
+                    const isAMax = (game.spells[combo.keyA] || 0) >= 5;
+                    const isBMax = (game.spells[combo.keyB] || 0) >= 5;
+                    const isUnlocked = isAMax && isBMax;
+
+                    return (
+                      <div
+                        className={`combination ${
+                          isUnlocked ? "unlocked fusion-unlocked-card" : ""
+                        }`}
+                        key={combo.id}
+                      >
+                        <div className="combo-icon">{combo.icon}</div>
+                        <div>
+                          <strong>
+                            {combo.name}{" "}
+                            {isUnlocked ? (
+                              <span className="fusion-active-badge">✨ ATIVA</span>
+                            ) : (
+                              "🔒"
+                            )}
+                          </strong>
+                          <div className="combo-spells">
+                            <span className={isAMax ? "spell-maxed-white" : ""}>
+                              {combo.a} ({game.spells[combo.keyA] || 0}/5)
+                            </span>{" "}
+                            +{" "}
+                            <span className={isBMax ? "spell-maxed-white" : ""}>
+                              {combo.b} ({game.spells[combo.keyB] || 0}/5)
+                            </span>
+                          </div>
+                          <div className="combo-requirement">
+                            {combo.description}
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* RECOMPENSA DE ARTEFATO DO BOSS */}
+          {artifactChoices.length > 0 && (
+            <div className="level-overlay">
+              <div className="artifact-book">
+                <div className="artifact-title">👑 RECOMPENSA DO BOSS 👑</div>
+                <div className="artifact-subtitle">
+                  O Bruxo Primordial foi derrotado. Escolha um artefato lendário.
+                </div>
+
+                <div className="artifact-grid">
+                  {artifactChoices.map((artifactKey) => {
+                    const artifact = ARTIFACTS[artifactKey];
+                    return (
+                      <button
+                        key={artifactKey}
+                        className="artifact-card"
+                        onClick={() => chooseArtifact(artifactKey)}
+                      >
+                        <div className="artifact-icon">{artifact.icon}</div>
+                        <div className="artifact-name">{artifact.name}</div>
+                        <div className="artifact-description">
+                          {artifact.description}
+                        </div>
+                      </button>
+                    );
+                  })}
+                </div>
+
+                <div className="boss-reward">✦ +1 NÍVEL CONCEDIDO ✦</div>
+              </div>
+            </div>
+          )}
+
+          {/* GAME OVER */}
+          {gameOver && (
+            <div className="game-over">
+              <div className="game-over-box">
+                <h1>☠ FIM DA NOITE ☠</h1>
+                <p>
+                  Você sobreviveu por <b>{Math.floor(game.time)}</b> segundos.
+                </p>
+                <p>
+                  Nível alcançado: <b>{game.player.level}</b> | Inimigos derrotados: <b>{game.kills}</b>
+                </p>
+                <div style={{ display: "flex", gap: "10px", justifyContent: "center" }}>
+                  <button onClick={() => startNewGame(selectedCharacter, selectedMap)}>
+                    Tentar novamente
+                  </button>
+                  <button onClick={() => setScreen("menu")}>Menu Inicial</button>
+                </div>
+              </div>
+            </div>
+          )}
+        </>
       )}
     </div>
   );

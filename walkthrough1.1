@@ -1,0 +1,60 @@
+# Walkthrough - Implementação das Novas Funcionalidades e Reações Elementais
+
+## Arquivos Alterados e Criados
+
+1. **[src/App.js](file:///c:/Users/Aluno/Desktop/primeiro-projeto/src/App.js)**:
+   - Adicionadas 4 novas magias (*Poças de Lava*, *Meteoro*, *Vinhas Sombrias*, *Umidade Arcana*).
+   - Implementadas 4 Reações Elementais da Umidade (*Vapor com Chama*, *Cadeia com Raio*, *Congelamento 3x com Gelo*, *Prisão 3x com Vinhas*).
+   - Rebalanceamento completo de Bosses (vida reduzida para 650 + 120/wave e escala visual reduzida para 1.3).
+   - Reformulação visual da Bomba Atômica com efeito de Carga, Onda de Choque, Partículas e Flash Global de tela inteira.
+   - Renderização das Runas Nórdicas (Algiz/Thurisaz para Repulsão e Berkanan/Laguz para Vida) diretamente abaixo do bruxo.
+   - Formação simétrica em Pentágono (360° / 5) para Orbes de Fogo e Familiares.
+   - Trava estrita de Nível Máximo (Lv. 5) e remoção automática de magias maxadas no Grimório.
+   - Sistema funcional de Fusões (*Inferno Arcano*, *Tempestade Glacial*, *Abismo*) desbloqueáveis ao maximizar magias duplas.
+
+2. **[src/App.css](file:///c:/Users/Aluno/Desktop/primeiro-projeto/src/App.css)**:
+   - Estilização para as opções de Fusão no Grimório e indicadores de progresso na HUD.
+
+3. **[src/assets/sprites.js](file:///c:/Users/Aluno/Desktop/primeiro-projeto/src/assets/sprites.js)**:
+   - Atualizado com as novas chaves de sprites para lava, meteoro, vinhas, umidade, flash e fusões com suporte a fallback Canvas.
+
+---
+
+## Detalhamento das Funcionalidades Implementadas
+
+### 1. Balanceamento dos Bosses
+- Boss primordial teve tamanho reduzido para `38px` (escala 1.3 em Canvas).
+- Vida reduzida significativamente para `650 + wave * 120`.
+
+### 2. Bomba Atômica Visual Impactante
+- Animação em estágios: Carga Arcana (0.3s) -> Onda de choque expansiva de 1400px -> Flash global branco/dourado cobrindo toda a viewport com fade-out gradual.
+
+### 3. Runas Nórdicas Sub-Jogador
+- Renderizadas diretamente abaixo do personagem (raio 65px ~3x o bruxo).
+- Runas de Repulsão (Algiz ᛉ) e Vida (Berkanan ᛒ) desenhadas com linhas rúnicas autênticas e brilho neón, enquanto o bruxo é desenhado por cima.
+
+### 4. Nível Máximo 5 & Filtro do Grimório
+- Magias no Lv. 5 deixam de ser oferecidas como opções no Grimório.
+
+### 5. Quatro Novas Magias & Reações Elementais
+- **Poças de Lava**: Poças incandescentes no chão causando dano continuo (Lv. 1 a 5).
+- **Meteoro**: Alvo no chão -> rastro de fogo -> explosão devastadora (Lv. 1 a 5).
+- **Vinhas Sombrias**: Enraízam 3, 6, 9, 12 ou 15 inimigos no local.
+- **Umidade Arcana**: Névoa arcana aplicando status `wet` e ícone de gota `💧` sobre os inimigos.
+  - *Umidade + Chama*: Dano duplo por Vapor (+100%) e névoa de vapor.
+  - *Umidade + Raio*: O raio se espalha atingindo até 3 inimigos molhados próximos.
+  - *Umidade + Gelo*: Congelamento multiplicado por **3x** (7.5 segundos).
+  - *Umidade + Vinhas*: Duração da prisão de vinhas multiplicada por **3x** (10.5 segundos).
+
+### 6. Pentágono para Orbes e Familiares
+- Familiares e Orbes posicionados rigorosamente a partir da matemática `360° / 5` ao redor do personagem.
+
+### 7. Fusões no Grimório e Gameplay
+- Maximizar duas magias requisitos (ex: Chama 5 + Orbes 5) desbloqueia a Fusão (*Inferno Arcano*, *Tempestade Glacial* ou *Abismo*), ativando super-orbes, nevascas com raios ou auras de vórtice nos familiares.
+
+---
+
+## Validação Final
+
+- **Integridade**: Todas as 16 mecânicas originais mantidas sem remoção ou simplificação.
+- **Compilação**: Projeto construído e validado.

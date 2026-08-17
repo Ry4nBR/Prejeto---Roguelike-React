@@ -15,30 +15,49 @@
 
 export const SPRITES = {
   player: null,
+  /* 10 PERSONAGENS */
+  char_ignis: null,
+  char_eira: null,
+  char_voltis: null,
+  char_nox: null,
+  char_pyra: null,
+  char_morrigan: null,
+  char_magmus: null,
+  char_astrion: null,
+  char_sylva: null,
+  char_nymira: null,
+  /* INIMIGOS E BOSS */
   darkWitch: null,
   darkWizard: null,
   corruptedMage: null,
   spectralWitch: null,
   boss: null,
+  /* MAGIAS */
   fireBall: null,
   iceRay: null,
   lightningBolt: null,
   shadowAura: null,
   orbitBall: null,
   familiar: null,
-  chest: null,
-  soul: null,
-  forestTile: null,
   lavaPool: null,
   meteor: null,
   vines: null,
   humidityCloud: null,
+  /* ITENS E RUNAS */
+  chest: null,
+  soul: null,
+  forestTile: null,
   nukeFlash: null,
   repulsionRune: null,
   healingRune: null,
-  fusionInferno: null,
-  fusionTempestade: null,
-  fusionAbismo: null,
+  /* 5 FUSÕES SUPREMAS */
+  fusionVapor: null,
+  fusionFloresta: null,
+  fusionPantano: null,
+  fusionCataclismo: null,
+  fusionAbismoVivo: null,
+  electricPlant: null,
+  swampPool: null,
 };
 
 /**

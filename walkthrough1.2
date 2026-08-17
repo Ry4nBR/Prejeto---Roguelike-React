@@ -1,0 +1,27 @@
+# Walkthrough - Implementação das Fusões Jogáveis, Rebalanceamento e Sistemas Visuais
+
+## Arquivos Alterados e Atualizados
+
+1. **[src/App.js](file:///c:/Users/Aluno/Desktop/primeiro-projeto/src/App.js)**:
+   - Implementação das magias de Fusão (*Inferno Arcano*, *Tempestade Glacial*, *Abismo*) como **magias jogáveis reais**, com IDs, casts, updates e progressão de nível de **1/5 a 5/5**.
+   - Atualização do Grimório para exibir o nível real (`Nível/5`) de todas as magias e destacar os nomes de magias no nível 5/5 em **BRANCO BRILHANTE** na aba de combinações.
+   - Rebalanceamento sustentável de dificuldade: teto de inimigos simultâneos (`MAX_ENEMIES_CAP = 110`), taxa de spawn e HP dinâmico permitindo progressão fluida além dos 119s.
+   - Geração de névoas de Umidade Arcana que nascem aleatoriamente no mapa, concedendo **Invencibilidade/Intangibilidade** ao bruxo quando ele permanece dentro delas.
+   - Runas Nórdicas em tamanho ampliado (80px), renderizadas em **CINZA DESATURADO** durante o cooldown (inativas) e em cores vibrantes brilhantes ao disparar o efeito.
+   - Formação em **Pentágono Real** (360°/5) com alocação matemática determinística nos 5 vértices simétricos sem qualquer sobreposição para Orbes de Fogo e Familiares.
+
+2. **[src/App.css](file:///c:/Users/Aluno/Desktop/primeiro-projeto/src/App.css)**:
+   - Adicionadas regras CSS `.spell-maxed-white` para o texto em branco de magias maxadas no Grimório e `.invincible-badge` para a HUD.
+
+---
+
+## Validação Obrigatoria Concluída
+
+- **Níveis das Magias**: Níveis exibidos corretamente como `0/5` a `5/5`. Magias no nível 5/5 são totalmente excluídas da seleção de Level Up.
+- **Texto Branco nas Fusões**: Nomes de magias em 5/5 são destacados em branco na página direita do Grimório.
+- **Fusões Jogáveis**: *Inferno Arcano*, *Tempestade Glacial* e *Abismo* sobem até 5/5 no Level Up e possuem ataques devastadores próprios.
+- **Névoa & Invencibilidade**: Névoas surgem pelo mapa; bruxo fica imune a dano de contato ao entrar nelas.
+- **Runas Nórdicas**: Exibem estado cinza desaturado em recarga e brilho vibrante quando ativas.
+- **Pentágono Simétrico**: Orbes e Familiares mantêm posições angulares perfeitas a 72° sem sobreposição.
+- **Dificuldade**: Inimigos continuam escalando com o tempo de forma sustentável para partidas longas além dos 119s.
+- **Compilação**: Projeto compila com sucesso (`react-scripts build` zerado de erros).
