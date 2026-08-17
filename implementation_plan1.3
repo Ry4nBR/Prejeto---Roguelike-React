@@ -1,108 +1,105 @@
-# PACOTE 1 — Menu Inicial, Personagens, Pausa/Save e Fusões
+# PACOTE 2 — Artefatos, Economia, Inimigos, Bosses e Balanceamento
 
-Este documento detalha o plano de implementação completo para o **Pacote 1** do Roguelike em React puro, preservando 100% dos sistemas existentes (magias, inimigos, bosses, waves, baús, XP, almas, runas, efeitos, câmera, combate e artefatos).
-
----
-
-## 1. Menu Inicial e Navegação
-- Criar telas controladas por estado React (`screen`: `'menu'`, `'game'`, `'characters'`, `'spells'`, `'maps'`, `'shop'`):
-  - **Menu Principal**: Jogar, Continuar Partida (se houver save), Personagens, Magias, Mapas, Loja.
-  - **Tela de Personagens**: Lista dos 10 personagens com nome, título, magia inicial, ícone, descrição, status colorido (desbloqueado) / cinza (bloqueado) e seleção de personagem ativo.
-  - **Tela de Magias**: Enciclopédia arcana com as 10 magias, ícones, mecânicas e sinergias.
-  - **Tela de Mapas**: Mapa 1 (Floresta Negra — Desbloqueado) e Mapa 2 (Cripta Ancestral — Bloqueado visualmente).
-  - **Tela da Loja**: Interface mística com melhorias permanentes (Vida Máxima, Velocidade, Dano, Atração) usando moedas/almas salvas no navegador.
+Este plano detalha as correções e adições do Pacote 2, mantendo total integridade do código atual (React + CSS puro) sem remover nenhuma funcionalidade existente.
 
 ---
 
-## 2. Pausa e Salvamento Nativo (LocalStorage)
-- Adicionar botão de **PAUSA (⏸)** na HUD e atalho de teclado (`Esc` ou `P`).
-- Ao pausar:
-  - Congelar completamente o loop do jogo, timers, inimigos, projéteis, efeitos e waves.
-  - Exibir modal de pausa com opções:
-    - **Continuar**
-    - **Salvar e Sair** (serializa o estado completo em `localStorage`)
-    - **Reiniciar Partida**
-    - **Menu Principal**
-- Ao abrir o jogo ou retornar ao Menu:
-  - Se houver partida salva no `localStorage`, exibir botão **"Continuar Partida Salva"**.
-  - Restaurar posição do jogador, atributos, 10 magias com seus níveis, fusões ativas, artefatos, inimigos, tempo e wave.
+## 1. Correção do Sistema de Magias
+- **Estado Inicial ao Iniciar Partida**:
+  - `fire` (Chama): Sempre começa em Lv.1 desbloqueada (ou Lv.2 caso o personagem escolhido seja Ignis).
+  - Magia principal do personagem selecionado: Começa em **Lv.2** desbloqueada.
+  - As demais magias começam em **Lv.0 e BLOQUEADAS**.
+- **Level Up**:
+  - Magias Lv.0 aparecem com a tag "DESBLOQUEAR (Nv. 1/5)".
+  - Ao escolher uma magia Lv.0, ela é desbloqueada e passa para Lv.1/5.
+  - Magias Lv.1/5 a Lv.4/5 continuam subindo de nível até Lv.5/5.
+  - Magias Lv.5/5 desaparecem permanentemente da lista de upgrades.
+  - Fusões continuam sem nível e não entram no sorteio de Level Up.
 
 ---
 
-## 3. Os 10 Personagens
-Implementar os 10 personagens especificados, preparando a estrutura de sprites:
-1. 🔥 **Ignis, o Piromante** (Magia Principal: Chama / `fire`)
-2. ❄️ **Eira, a Feiticeira Glacial** (Magia Principal: Gelo / `ice`)
-3. ⚡ **Voltis, o Condutor** (Magia Principal: Raio / `lightning`)
-4. 🌑 **Nox, o Arauto do Abismo** (Magia Principal: Vórtice Sombrio / `shadow`)
-5. 🔴 **Pyra, a Invocadora Ígnea** (Magia Principal: Orbes de Fogo / `orbitFire`)
-6. 👻 **Morrigan, a Bruxa Espectral** (Magia Principal: Familiar / `familiar`)
-7. 🌋 **Magmus, o Senhor da Lava** (Magia Principal: Poças de Lava / `lava`)
-8. ☄️ **Astrion, o Astrólogo** (Magia Principal: Meteoro / `meteor`)
-9. 🌿 **Sylva, a Druida Sombria** (Magia Principal: Vinhas / `vines`)
-10. 💧 **Nymira, a Maga da Névoa** (Magia Principal: Umidade / `humidity`)
-
-### Regras de Inicialização:
-- Ao iniciar com um personagem:
-  - Sua magia principal começa no **Lv. 2**.
-  - As outras 9 magias começam no **Lv. 1**.
-  - Nível máximo de todas as magias normais = **Lv. 5**.
+## 2. Slots de Artefatos & Sistema de Substituição
+- **3 Slots Fixos no HUD**:
+  - Visual no HUD: `[ Slot 1 ] [ Slot 2 ] [ Slot 3 ]`.
+  - Slots vazios mostram `[ VAZIO ]`.
+  - Slots preenchidos mostram ícone, nome, status e contador de cooldown em tempo real (para artefatos com recarga).
+- **Aquisição**:
+  - Quando slots < 3: o novo artefato ocupa o primeiro slot livre e sai do pool.
+  - Quando slots = 3/3: ao escolher uma recompensa de Boss, abre a tela modal de **Substituição de Artefato**:
+    - O jogador escolhe qual dos 3 artefatos equipados deseja substituir.
+    - O artefato removido volta para o pool e seus efeitos são revertidos.
+    - O novo artefato assume o slot e aplica seus efeitos.
+  - Proibição estrita de duplicatas.
 
 ---
 
-## 4. Grimório e Level Up
-- No Level Up:
-  - Apenas magias normais com **nível menor que 5** podem aparecer como opção de upgrade.
-  - Magias em **Lv. 5 desaparecem** da lista de opções de upgrade.
-  - **Nenhuma magia Lv. 0 é mostrada**.
-- Fusões:
-  - **NÃO possuem nível**.
-  - **NÃO entram** como opções de upgrade no sorteio de Level Up (1/5 → 5/5).
-  - No Grimório (página da direita):
-    - Mostra o status das 5 fusões (🔒 Bloqueada / ✨ Desbloqueada / Ativa).
-    - Quando ambas as magias componentes chegam ao **Lv. 5**, a fusão fica **desbloqueada e ativa** automaticamente ou via ativação sem nível.
+## 3. Cooldown dos Artefatos
+- Artefatos com recarga ativa (`repulsionRune`, `healingRune`, `stormSymbol`):
+  - Exibição de contagem regressiva em segundos (`12.4s`, `4.1s`, `PRONTO!`).
+  - Efeito visual de brilho e pulso quando prontos para ativar.
+- Artefatos passivos (`broom`, `mirror`, `piercingFlame`, `ricochet`, etc.) exibem badge `PASSIVO`.
 
 ---
 
-## 5. Implementação das 5 Fusões no Gameplay
-1. 🔥 **Chama + ❄️ Gelo = Vapor Infernal (`vaporInfernal`)**:
-   - Cria nuvens de vapor superaquecido que combinam dano contínuo massivo de fogo e gelo com desaceleração.
-2. ⚡ **Raio + 🌿 Vinhas = Geração de Floresta / Floresta Elétrica (`florestaEletrica`)**:
-   - Mortes causadas por raios fazem brotar uma **Planta Elétrica** no local da morte (permanece 5s).
-   - As plantas disparam esferas de raio nos inimigos próximos e mortes subsequentes podem gerar novas plantas (reação em cadeia).
-   - Limite global estrito de **5 plantas simultâneas**.
-3. 🌿 **Vinhas + 💧 Umidade = Pântano Sombrio (`pantanoSombrio`)**:
-   - Cria áreas de pântano escuro que enraízam/desaceleram fortemente os inimigos, aplicando umidade e dano ácido contínuo.
-4. ☄️ **Meteoro + 🌋 Poças de Lava = Cataclismo (`cataclismo`)**:
-   - Meteoros provocam explosões devastadoras e criam poças de lava permanentes/ampliadas no impacto com estilhaços ígneos.
-5. 🌑 **Vórtice Sombrio + 👻 Familiar = Abismo Vivo (`abismoVivo`)**:
-   - Os familiares manifestam vórtices do abismo ao redor de si, puxando inimigos, desacelerando-os e disparando orbes abissais perfurantes.
+## 4. Cooldown das Magias e Rebalanceamento
+- Adicionar indicadores de recarga das magias no HUD e nas cartas.
+- Ajustar tempos de recarga base e escalonamento por nível:
+  - `fire`: 1.5s base (reduz até 1.1s no Lv.5)
+  - `ice`: 3.0s base (reduz até 2.2s no Lv.5)
+  - `lightning`: 4.5s base (reduz até 3.2s no Lv.5)
+  - `lava`: 5.0s base (duração 6s)
+  - `meteor`: 4.8s base (reduz até 3.5s no Lv.5)
+  - `vines`: 5.5s base (duração 4s)
+  - `humidity`: 8.0s base (duração 7s)
+- Evitar poluição excessiva e sobreposição mantendo responsividade.
 
 ---
 
-## 6. Estrutura de Arquivos e Alterações Propostas
-- `src/assets/sprites.js`: Adicionar chaves de sprites para os 10 personagens e para as novas fusões / efeitos (mantendo fallback procedural Canvas).
-- `src/App.js`:
-  - Adicionar estados de tela, menus, personagens, mapas, loja e sistema de pausa.
-  - Integrar salvamento/carregamento no `localStorage`.
-  - Atualizar inicialização de magias (Lv. 2 para principal, Lv. 1 para as demais).
-  - Implementar as 5 fusões no loop de combate, renderização Canvas e efeitos.
-  - Atualizar Grimório e Level Up com exclusão de Lv. 5 e remoção de níveis para fusões.
-- `src/App.css`:
-  - Adicionar estilização premium para Menu Inicial, Tela de Personagens, Tela de Magias, Tela de Mapas, Tela de Loja e Menu de Pausa.
+## 5. Economia de Almas & Loja de Personagens
+- Persistir saldo de Almas/Moedas no `localStorage` (`roguelike_bank`).
+- Desbloqueio de Personagens na Loja e na Tela de Personagens:
+  - Ignis e Eira começam desbloqueados (gratuitos).
+  - Outros 8 personagens têm preço em Almas (ex: 80 a 250 Almas).
+  - Personagens comprados são salvos em `localStorage` (`roguelike_unlocked_chars`) e ficam disponíveis permanentemente.
+
+---
+
+## 6. Novos Artefatos Funcionais
+1. **Pacto de Sangue (`bloodPact`)**: Aumenta o dano em até +50% conforme o HP do jogador diminui.
+2. **Núcleo Magnético (`magneticCore`)**: Aumenta o raio de atração de almas em +100%.
+3. **Ampulheta Arcana (`arcaneHourglass`)**: Reduz em 25% o cooldown de todas as magias ativas.
+4. **Olho do Caçador (`huntersEye`)**: Causa +60% de dano contra inimigos com menos de 35% de HP.
+5. **Lua Sombria (`darkMoon`)**: Concede +12% de dano por wave concluída na partida.
+
+---
+
+## 7. Novos Inimigos & Spawn Adaptativo
+Adicionar 6 novos tipos de monstros ao pool de spawn:
+1. **Guardião**: Lento, encouraçado e muito resistente.
+2. **Corredor**: Veloz, esguio e com pouca vida.
+3. **Invocador**: Mantém distância tática e invoca lacaios periodicamente.
+4. **Enxame**: Mini criaturas que surgem em bando veloz.
+5. **Ceifador**: Inimigo raro de alta letalidade e ataque feroz.
+6. **Colosso**: Titã gigante com barra de vida densa.
+- **Spawn Adaptativo**: Teto de inimigos controlado para evitar lag e sobrecarga na tela.
+
+---
+
+## 8. Novos Bosses Elementais
+Expandir a cada 5 waves com chefes temáticos:
+1. **Bruxo Primordial** (Wave 5): Boss clássico de sombras e magias arcanas.
+2. **Magmord, o Senhor do Magma** (Wave 10): Erupções vulcânicas e rios de lava.
+3. **Nocthar, o Devorador de Sombras** (Wave 15): Vórtices sombrios gravitacionais.
+4. **Tempestrix, a Rainha dos Raios** (Wave 20): Tempestades e relâmpagos em área.
+5. **Virelia, a Matriarca das Vinhas** (Wave 25): Raízes imobilizadoras e esporos.
+6. **Astragor, o Soberano Cósmico** (Wave 30): Chuva massiva de meteoros cósmicos.
 
 ---
 
 ## Plano de Verificação
-1. **Compilação**: Validar build React sem erros de compilação ou avisos impeditivos.
-2. **Menu e Telas**: Testar transição entre Menu Inicial, Personagens, Magias, Mapas, Loja e Jogo.
-3. **Pausa e Salvamento**:
-   - Testar congelamento de jogo ao pausar.
-   - Testar "Salvar e Sair" e validar se ao retornar o botão "Continuar Partida Salva" restaura fielmente o jogo.
-4. **10 Personagens**:
-   - Testar iniciar com diferentes personagens e conferir se a magia inicial está no Lv. 2 e as outras no Lv. 1.
-5. **Level Up & Grimório**:
-   - Verificar se magias Lv. 5 não aparecem mais no Level Up.
-   - Verificar se fusões não possuem níveis e funcionam assim que os requisitos são atingidos.
-6. **5 Fusões**:
-   - Testar o efeito e funcionamento de cada uma das 5 fusões em batalha (incluindo limite de 5 plantas para a fusão Raio + Vinhas).
+1. **Compilação**: `npm run build` deve compilar com 0 erros.
+2. **Magias Iniciais**: Conferir que apenas Chama (Lv.1 ou Lv.2) e a magia do herói escolhido (Lv.2) começam ativas, e as outras 8 começam em Lv.0 bloqueadas.
+3. **Slots de Artefatos**: Conferir os 3 slots no HUD, ocupação sequencial e modal de substituição quando 3/3 slots estiverem cheios.
+4. **Cooldowns**: Verificar contadores em tempo real para artefatos e magias.
+5. **Loja & Personagens**: Comprar personagem com almas e verificar persistência após reiniciar o jogo.
+6. **Novos Inimigos e Bosses**: Conferir spawn dos 6 novos monstros e chefes elementais.

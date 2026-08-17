@@ -141,13 +141,12 @@ button {
   gap: 6px;
 }
 
-.spell-mini,
-.artifact-mini {
+.spell-mini {
   display: flex;
   align-items: center;
   gap: 8px;
-  min-width: 150px;
-  padding: 6px 9px;
+  min-width: 170px;
+  padding: 6px 10px;
   border: 1px solid rgba(255, 255, 255, 0.12);
   border-radius: 7px;
   background: rgba(10, 8, 14, 0.68);
@@ -160,23 +159,241 @@ button {
   color: #d8aaff;
 }
 
-.artifact-mini-list {
+.spell-cd-indicator {
+  font-size: 10px;
+  padding: 2px 5px;
+  border-radius: 4px;
+  background: rgba(255, 100, 100, 0.25);
+  color: #ff9999;
+  border: 1px solid rgba(255, 120, 120, 0.4);
+}
+
+.spell-cd-ready {
+  background: rgba(80, 250, 123, 0.15);
+  color: #50fa7b;
+  border-color: rgba(80, 250, 123, 0.35);
+}
+
+/* =========================================================
+   3 SLOTS FIXOS DE ARTEFATOS NO HUD
+========================================================= */
+
+.artifact-slots-hud {
   position: absolute;
   right: 18px;
   bottom: 18px;
-  width: 220px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  width: 250px;
 }
 
-.artifact-mini-title {
-  margin-bottom: 5px;
-  font-size: 10px;
+.artifact-slots-title {
+  font-size: 11px;
   letter-spacing: 2px;
-  color: #e7c98a;
+  color: #f1d27f;
+  text-shadow: 0 0 8px rgba(241, 210, 127, 0.4);
+  margin-bottom: 2px;
 }
 
-.artifact-mini {
-  min-width: 0;
-  margin-top: 5px;
+.artifact-slots-row {
+  display: flex;
+  gap: 8px;
+}
+
+.artifact-slot-card {
+  flex: 1;
+  min-height: 64px;
+  padding: 6px 4px;
+  border: 1px dashed rgba(241, 210, 127, 0.35);
+  border-radius: 8px;
+  background: rgba(18, 13, 24, 0.75);
+  backdrop-filter: blur(6px);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  transition: all 0.2s ease;
+}
+
+.artifact-slot-card.filled {
+  border: 1px solid rgba(241, 210, 127, 0.7);
+  background: rgba(34, 24, 45, 0.88);
+  box-shadow: 0 0 12px rgba(241, 210, 127, 0.2);
+}
+
+.artifact-slot-card.ready {
+  border-color: #50fa7b;
+  box-shadow: 0 0 15px rgba(80, 250, 123, 0.4);
+}
+
+.artifact-slot-empty {
+  font-size: 10px;
+  font-weight: bold;
+  letter-spacing: 1px;
+  color: #7b6d85;
+}
+
+.artifact-slot-icon {
+  font-size: 22px;
+  line-height: 1;
+}
+
+.artifact-slot-name {
+  font-size: 9px;
+  font-weight: bold;
+  color: #f1d27f;
+  margin-top: 2px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 70px;
+}
+
+.artifact-slot-cd {
+  font-size: 9px;
+  font-weight: bold;
+  padding: 1px 4px;
+  border-radius: 3px;
+  background: rgba(255, 80, 80, 0.3);
+  color: #ff9999;
+  margin-top: 2px;
+}
+
+.artifact-slot-cd.ready-badge {
+  background: rgba(80, 250, 123, 0.3);
+  color: #50fa7b;
+}
+
+.artifact-slot-cd.passive-badge {
+  background: rgba(180, 120, 240, 0.25);
+  color: #d8aaff;
+}
+
+/* =========================================================
+   MODAL DE SUBSTITUIÇÃO DE ARTEFATOS (SLOTS 3/3)
+========================================================= */
+
+.replace-modal-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 35;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  background: rgba(4, 3, 7, 0.85);
+  backdrop-filter: blur(8px);
+}
+
+.replace-modal-box {
+  width: min(720px, 94vw);
+  padding: 30px;
+  border: 1px solid rgba(241, 210, 127, 0.5);
+  border-radius: 14px;
+  text-align: center;
+  background: #17101f;
+  box-shadow: 0 30px 90px rgba(0, 0, 0, 0.9);
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.replace-title {
+  margin: 0;
+  font-size: 24px;
+  font-weight: 900;
+  letter-spacing: 2px;
+  color: #f1d27f;
+}
+
+.replace-subtitle {
+  font-size: 13px;
+  color: #cbbad1;
+  margin-top: -6px;
+}
+
+.replace-new-incoming {
+  padding: 12px;
+  border-radius: 8px;
+  background: rgba(255, 215, 0, 0.12);
+  border: 1px solid rgba(255, 215, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+}
+
+.replace-slots-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+  margin: 10px 0;
+}
+
+.replace-equipped-card {
+  padding: 16px 10px;
+  border: 1px solid rgba(195, 111, 255, 0.35);
+  border-radius: 10px;
+  background: rgba(30, 20, 42, 0.85);
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  transition: all 0.15s ease;
+}
+
+.replace-equipped-card:hover {
+  transform: translateY(-3px);
+  border-color: #ff6b6b;
+  background: rgba(60, 20, 35, 0.9);
+}
+
+.btn-replace-slot {
+  width: 100%;
+  padding: 6px;
+  font-size: 11px;
+  font-weight: bold;
+  border-radius: 6px;
+  border: 0;
+  background: #d32f2f;
+  color: white;
+  cursor: pointer;
+}
+
+.char-price-badge {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 12px;
+  font-weight: bold;
+  color: #ffd54f;
+  margin-bottom: 6px;
+}
+
+.char-buy-action-btn {
+  width: 100%;
+  padding: 8px;
+  font-size: 12px;
+  font-weight: bold;
+  border-radius: 6px;
+  border: 0;
+  background: linear-gradient(135deg, #7c5817 0%, #b88629 100%);
+  color: white;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.char-buy-action-btn:hover:not(:disabled) {
+  background: linear-gradient(135deg, #996e1e 0%, #dba235 100%);
+  transform: translateY(-2px);
+}
+
+.char-buy-action-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
 }
 
 .buffs {

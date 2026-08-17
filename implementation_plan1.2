@@ -1,0 +1,108 @@
+# PACOTE 1 — Menu Inicial, Personagens, Pausa/Save e Fusões
+
+Este documento detalha o plano de implementação completo para o **Pacote 1** do Roguelike em React puro, preservando 100% dos sistemas existentes (magias, inimigos, bosses, waves, baús, XP, almas, runas, efeitos, câmera, combate e artefatos).
+
+---
+
+## 1. Menu Inicial e Navegação
+- Criar telas controladas por estado React (`screen`: `'menu'`, `'game'`, `'characters'`, `'spells'`, `'maps'`, `'shop'`):
+  - **Menu Principal**: Jogar, Continuar Partida (se houver save), Personagens, Magias, Mapas, Loja.
+  - **Tela de Personagens**: Lista dos 10 personagens com nome, título, magia inicial, ícone, descrição, status colorido (desbloqueado) / cinza (bloqueado) e seleção de personagem ativo.
+  - **Tela de Magias**: Enciclopédia arcana com as 10 magias, ícones, mecânicas e sinergias.
+  - **Tela de Mapas**: Mapa 1 (Floresta Negra — Desbloqueado) e Mapa 2 (Cripta Ancestral — Bloqueado visualmente).
+  - **Tela da Loja**: Interface mística com melhorias permanentes (Vida Máxima, Velocidade, Dano, Atração) usando moedas/almas salvas no navegador.
+
+---
+
+## 2. Pausa e Salvamento Nativo (LocalStorage)
+- Adicionar botão de **PAUSA (⏸)** na HUD e atalho de teclado (`Esc` ou `P`).
+- Ao pausar:
+  - Congelar completamente o loop do jogo, timers, inimigos, projéteis, efeitos e waves.
+  - Exibir modal de pausa com opções:
+    - **Continuar**
+    - **Salvar e Sair** (serializa o estado completo em `localStorage`)
+    - **Reiniciar Partida**
+    - **Menu Principal**
+- Ao abrir o jogo ou retornar ao Menu:
+  - Se houver partida salva no `localStorage`, exibir botão **"Continuar Partida Salva"**.
+  - Restaurar posição do jogador, atributos, 10 magias com seus níveis, fusões ativas, artefatos, inimigos, tempo e wave.
+
+---
+
+## 3. Os 10 Personagens
+Implementar os 10 personagens especificados, preparando a estrutura de sprites:
+1. 🔥 **Ignis, o Piromante** (Magia Principal: Chama / `fire`)
+2. ❄️ **Eira, a Feiticeira Glacial** (Magia Principal: Gelo / `ice`)
+3. ⚡ **Voltis, o Condutor** (Magia Principal: Raio / `lightning`)
+4. 🌑 **Nox, o Arauto do Abismo** (Magia Principal: Vórtice Sombrio / `shadow`)
+5. 🔴 **Pyra, a Invocadora Ígnea** (Magia Principal: Orbes de Fogo / `orbitFire`)
+6. 👻 **Morrigan, a Bruxa Espectral** (Magia Principal: Familiar / `familiar`)
+7. 🌋 **Magmus, o Senhor da Lava** (Magia Principal: Poças de Lava / `lava`)
+8. ☄️ **Astrion, o Astrólogo** (Magia Principal: Meteoro / `meteor`)
+9. 🌿 **Sylva, a Druida Sombria** (Magia Principal: Vinhas / `vines`)
+10. 💧 **Nymira, a Maga da Névoa** (Magia Principal: Umidade / `humidity`)
+
+### Regras de Inicialização:
+- Ao iniciar com um personagem:
+  - Sua magia principal começa no **Lv. 2**.
+  - As outras 9 magias começam no **Lv. 1**.
+  - Nível máximo de todas as magias normais = **Lv. 5**.
+
+---
+
+## 4. Grimório e Level Up
+- No Level Up:
+  - Apenas magias normais com **nível menor que 5** podem aparecer como opção de upgrade.
+  - Magias em **Lv. 5 desaparecem** da lista de opções de upgrade.
+  - **Nenhuma magia Lv. 0 é mostrada**.
+- Fusões:
+  - **NÃO possuem nível**.
+  - **NÃO entram** como opções de upgrade no sorteio de Level Up (1/5 → 5/5).
+  - No Grimório (página da direita):
+    - Mostra o status das 5 fusões (🔒 Bloqueada / ✨ Desbloqueada / Ativa).
+    - Quando ambas as magias componentes chegam ao **Lv. 5**, a fusão fica **desbloqueada e ativa** automaticamente ou via ativação sem nível.
+
+---
+
+## 5. Implementação das 5 Fusões no Gameplay
+1. 🔥 **Chama + ❄️ Gelo = Vapor Infernal (`vaporInfernal`)**:
+   - Cria nuvens de vapor superaquecido que combinam dano contínuo massivo de fogo e gelo com desaceleração.
+2. ⚡ **Raio + 🌿 Vinhas = Geração de Floresta / Floresta Elétrica (`florestaEletrica`)**:
+   - Mortes causadas por raios fazem brotar uma **Planta Elétrica** no local da morte (permanece 5s).
+   - As plantas disparam esferas de raio nos inimigos próximos e mortes subsequentes podem gerar novas plantas (reação em cadeia).
+   - Limite global estrito de **5 plantas simultâneas**.
+3. 🌿 **Vinhas + 💧 Umidade = Pântano Sombrio (`pantanoSombrio`)**:
+   - Cria áreas de pântano escuro que enraízam/desaceleram fortemente os inimigos, aplicando umidade e dano ácido contínuo.
+4. ☄️ **Meteoro + 🌋 Poças de Lava = Cataclismo (`cataclismo`)**:
+   - Meteoros provocam explosões devastadoras e criam poças de lava permanentes/ampliadas no impacto com estilhaços ígneos.
+5. 🌑 **Vórtice Sombrio + 👻 Familiar = Abismo Vivo (`abismoVivo`)**:
+   - Os familiares manifestam vórtices do abismo ao redor de si, puxando inimigos, desacelerando-os e disparando orbes abissais perfurantes.
+
+---
+
+## 6. Estrutura de Arquivos e Alterações Propostas
+- `src/assets/sprites.js`: Adicionar chaves de sprites para os 10 personagens e para as novas fusões / efeitos (mantendo fallback procedural Canvas).
+- `src/App.js`:
+  - Adicionar estados de tela, menus, personagens, mapas, loja e sistema de pausa.
+  - Integrar salvamento/carregamento no `localStorage`.
+  - Atualizar inicialização de magias (Lv. 2 para principal, Lv. 1 para as demais).
+  - Implementar as 5 fusões no loop de combate, renderização Canvas e efeitos.
+  - Atualizar Grimório e Level Up com exclusão de Lv. 5 e remoção de níveis para fusões.
+- `src/App.css`:
+  - Adicionar estilização premium para Menu Inicial, Tela de Personagens, Tela de Magias, Tela de Mapas, Tela de Loja e Menu de Pausa.
+
+---
+
+## Plano de Verificação
+1. **Compilação**: Validar build React sem erros de compilação ou avisos impeditivos.
+2. **Menu e Telas**: Testar transição entre Menu Inicial, Personagens, Magias, Mapas, Loja e Jogo.
+3. **Pausa e Salvamento**:
+   - Testar congelamento de jogo ao pausar.
+   - Testar "Salvar e Sair" e validar se ao retornar o botão "Continuar Partida Salva" restaura fielmente o jogo.
+4. **10 Personagens**:
+   - Testar iniciar com diferentes personagens e conferir se a magia inicial está no Lv. 2 e as outras no Lv. 1.
+5. **Level Up & Grimório**:
+   - Verificar se magias Lv. 5 não aparecem mais no Level Up.
+   - Verificar se fusões não possuem níveis e funcionam assim que os requisitos são atingidos.
+6. **5 Fusões**:
+   - Testar o efeito e funcionamento de cada uma das 5 fusões em batalha (incluindo limite de 5 plantas para a fusão Raio + Vinhas).
